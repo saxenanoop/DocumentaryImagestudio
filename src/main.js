@@ -7,7 +7,7 @@ import { renderFooter } from './components/Footer.js';
 import { showToast } from './components/Toast.js';
 import { DOCUMENTARY_PRESETS } from './presets.js';
 import { generateShotPlan, generatePromptSheetMarkdown } from './promptEngine.js';
-import { saveDraft, getDraft, saveProjectToHistory, getProjectHistory, deleteProjectFromHistory } from './storage.js';
+import { saveDraft, getDraft, clearDraft, saveProjectToHistory, getProjectHistory, deleteProjectFromHistory } from './storage.js';
 
 import { renderHomeView } from './views/HomeView.js';
 import { renderCreateView } from './views/CreateView.js';
@@ -77,6 +77,10 @@ function attachEventListeners() {
       const targetRoute = link.getAttribute('data-route');
       if (targetRoute === 'create') {
         state.wizardStep = 1;
+        // If clicking create fresh, clear previous preset selection unless already preset-initiated
+        if (!link.classList.contains('preset-card')) {
+          state.selectedPresetId = null;
+        }
       }
       navigateTo(targetRoute);
     });
@@ -88,11 +92,16 @@ function attachEventListeners() {
       const presetId = card.getAttribute('data-preset-id');
       state.selectedPresetId = presetId;
       state.wizardStep = 1;
+      clearDraft();
+      const preset = DOCUMENTARY_PRESETS.find(p => p.id === presetId);
+      if (preset) {
+        saveDraft(preset.defaults);
+      }
       navigateTo('create');
     });
   });
 
-  // Preset Autofill Chips on Create Form (Step 2)
+  // Preset Autofill Chips on Create Form (Step 1 & Step 2)
   document.querySelectorAll('[data-preset-autofill]').forEach(chip => {
     chip.addEventListener('click', () => {
       const presetId = chip.getAttribute('data-preset-autofill');
@@ -103,9 +112,11 @@ function attachEventListeners() {
         if (form) {
           autofillFormInputs(form, preset.defaults);
           saveDraft(getFullFormData(form));
+        } else {
+          saveDraft(preset.defaults);
         }
       }
-      showToast(`Autofilled form with ${presetId.toUpperCase()} preset`, 'success');
+      showToast(`Autofilled with ${presetId.toUpperCase()} preset`, 'success');
     });
   });
 
@@ -181,7 +192,9 @@ function attachEventListeners() {
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      // Read live form inputs from DOM
       const brief = getFullFormData(form);
+      saveDraft(brief);
       
       showToast('Building documentary shot plan...', 'info');
 
@@ -262,7 +275,7 @@ function attachEventListeners() {
 }
 
 /**
- * Extracts 100% of form input data directly from the DOM
+ * Extracts 100% of form input data directly from live DOM elements
  */
 function getFullFormData(form) {
   if (!form) return getDraft() || {};
@@ -281,7 +294,7 @@ function getFullFormData(form) {
 }
 
 /**
- * Autofills all form inputs in the DOM
+ * Autofills form inputs directly in the DOM
  */
 function autofillFormInputs(form, defaults) {
   if (!form || !defaults) return;

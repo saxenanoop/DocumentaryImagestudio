@@ -1,26 +1,26 @@
 /**
- * Create View Component (DOM-Preserved 2-Step Wizard)
+ * Create View Component (DOM-Preserved 2-Step Wizard with Clean Initial State)
  */
 import { DOCUMENTARY_PRESETS } from '../presets.js';
 import { getDraft } from '../storage.js';
 
 export function renderCreateView(selectedPresetId = null, currentStep = 1) {
-  // Check if draft exists or if a preset was selected
+  // Start with clean initial values unless draft or preset is loaded
   let initialValues = {
-    projectName: "Community Resilience Study",
-    topic: "Sustainable Urban Agriculture & Local Food Security",
-    subject: "Volunteers actively harvesting and cataloging organic produce together in a city garden",
-    location: "Community garden plot surrounded by residential neighborhoods",
+    projectName: "",
+    topic: "",
+    subject: "",
+    location: "",
     timeOfDay: "Late afternoon golden hour",
-    lighting: "Warm direct sunlight with soft directional shadows",
-    mood: "Collaborative, dignified, hopeful",
-    visualStyle: "Unposed social realism, candid documentary photojournalism",
+    lighting: "",
+    mood: "",
+    visualStyle: "",
     filmLook: "Warm & Hopeful Daylight (Kodak Portra 400 35mm)",
     aspectRatio: "16:9"
   };
 
   const draft = getDraft();
-  if (draft) {
+  if (draft && Object.keys(draft).length > 0) {
     initialValues = { ...initialValues, ...draft };
   }
 
@@ -77,6 +77,21 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
             </h3>
             <span class="badge" style="background: var(--bg-subtle); color: var(--text-muted); font-size: 0.75rem;">Step 1 of 2</span>
           </div>
+
+          <!-- Preset Quick Selection Chips -->
+          <div style="margin-bottom: 1.5rem; background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+            <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
+              <span>DOCUMENTARY CATEGORY PRESETS</span>
+              <span style="font-size: 0.75rem; font-weight: normal;">Click to autofill sample brief</span>
+            </div>
+            <div class="preset-chips" style="margin-bottom: 0;">
+              ${DOCUMENTARY_PRESETS.map(preset => `
+                <button type="button" class="chip ${selectedPresetId === preset.id ? 'active' : ''}" data-preset-autofill="${preset.id}">
+                  ${preset.title}
+                </button>
+              `).join('')}
+            </div>
+          </div>
           
           <div class="form-group">
             <label class="form-label" for="projectName">
@@ -126,21 +141,6 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
             <span class="badge" style="background: var(--bg-subtle); color: var(--text-muted); font-size: 0.75rem;">Step 2 of 2</span>
           </div>
 
-          <!-- Preset Quick Selection Chips -->
-          <div style="margin-bottom: 1.5rem; background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
-            <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-              <span>DOCUMENTARY CATEGORY PRESETS</span>
-              <span style="font-size: 0.75rem; font-weight: normal;">Click to autofill style settings</span>
-            </div>
-            <div class="preset-chips" style="margin-bottom: 0;">
-              ${DOCUMENTARY_PRESETS.map(preset => `
-                <button type="button" class="chip ${selectedPresetId === preset.id ? 'active' : ''}" data-preset-autofill="${preset.id}">
-                  ${preset.title}
-                </button>
-              `).join('')}
-            </div>
-          </div>
-
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label" for="timeOfDay">
@@ -162,19 +162,19 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
                 Lighting Condition
                 <span class="form-hint">Available light quality</span>
               </label>
-              <input type="text" id="lighting" class="form-control" value="${initialValues.lighting}" placeholder="e.g. Diffused window daylight filtering through wood" required />
+              <input type="text" id="lighting" class="form-control" value="${initialValues.lighting}" placeholder="e.g. Warm sunlight filtering through wooden slats" />
             </div>
           </div>
 
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label" for="mood">Emotional Mood</label>
-              <input type="text" id="mood" class="form-control" value="${initialValues.mood}" placeholder="e.g. Collaborative, dignified, hopeful" required />
+              <input type="text" id="mood" class="form-control" value="${initialValues.mood}" placeholder="e.g. Collaborative, dignified, hopeful" />
             </div>
 
             <div class="form-group">
               <label class="form-label" for="visualStyle">Visual Framing Style</label>
-              <input type="text" id="visualStyle" class="form-control" value="${initialValues.visualStyle}" placeholder="e.g. Unposed observational photojournalism" required />
+              <input type="text" id="visualStyle" class="form-control" value="${initialValues.visualStyle}" placeholder="e.g. Unposed observational photojournalism" />
             </div>
           </div>
 
