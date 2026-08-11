@@ -18,6 +18,7 @@ import { renderHistoryView } from './views/HistoryView.js';
 // Application State
 const state = {
   route: 'home',
+  wizardStep: 1,
   selectedPresetId: null,
   activeProject: null // { brief, shots }
 };
@@ -34,12 +35,12 @@ function renderApp() {
   if (state.route === 'home') {
     viewHtml = renderHomeView();
   } else if (state.route === 'create') {
-    viewHtml = renderCreateView(state.selectedPresetId);
+    viewHtml = renderCreateView(state.selectedPresetId, state.wizardStep);
   } else if (state.route === 'results') {
     if (!state.activeProject) {
-      // Fallback if no project generated yet
       state.route = 'create';
-      viewHtml = renderCreateView();
+      state.wizardStep = 1;
+      viewHtml = renderCreateView(state.selectedPresetId, state.wizardStep);
     } else {
       viewHtml = renderResultsView(state.activeProject);
     }
@@ -74,6 +75,9 @@ function attachEventListeners() {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const targetRoute = link.getAttribute('data-route');
+      if (targetRoute === 'create') {
+        state.wizardStep = 1;
+      }
       navigateTo(targetRoute);
     });
   });
@@ -83,17 +87,23 @@ function attachEventListeners() {
     card.addEventListener('click', () => {
       const presetId = card.getAttribute('data-preset-id');
       state.selectedPresetId = presetId;
+      state.wizardStep = 1;
       navigateTo('create');
     });
   });
 
-  // Preset Autofill Chips on Create Form
+  // Preset Autofill Chips on Create Form (Step 2)
   document.querySelectorAll('[data-preset-autofill]').forEach(chip => {
     chip.addEventListener('click', () => {
       const presetId = chip.getAttribute('data-preset-autofill');
       state.selectedPresetId = presetId;
+      const preset = DOCUMENTARY_PRESETS.find(p => p.id === presetId);
+      if (preset) {
+        const draft = getDraft() || {};
+        saveDraft({ ...draft, ...preset.defaults });
+      }
       renderApp();
-      showToast(`Autofilled form with ${presetId.toUpperCase()} documentary preset`, 'success');
+      showToast(`Autofilled with ${presetId.toUpperCase()} preset`, 'success');
     });
   });
 
@@ -108,17 +118,53 @@ function attachEventListeners() {
     });
   });
 
+  // 2-Step Wizard Navigation
+  const btnNext = document.getElementById('btn-next-step');
+  if (btnNext) {
+    btnNext.addEventListener('click', () => {
+      const form = document.getElementById('create-project-form');
+      if (form) {
+        const step1Data = getStep1FormData(form);
+        const currentDraft = getDraft() || {};
+        saveDraft({ ...currentDraft, ...step1Data });
+        
+        // Simple Step 1 validation
+        if (!step1Data.topic || !step1Data.subject) {
+          showToast('Please enter topic and subject before proceeding', 'info');
+          return;
+        }
+        state.wizardStep = 2;
+        renderApp();
+      }
+    });
+  }
+
+  const btnBack = document.getElementById('btn-back-step');
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      const form = document.getElementById('create-project-form');
+      if (form) {
+        const step2Data = getStep2FormData(form);
+        const currentDraft = getDraft() || {};
+        saveDraft({ ...currentDraft, ...step2Data });
+      }
+      state.wizardStep = 1;
+      renderApp();
+    });
+  }
+
   // Form Input Change Auto-Save Draft
   const form = document.getElementById('create-project-form');
   if (form) {
     form.addEventListener('input', () => {
-      const draftData = getFormData(form);
-      saveDraft(draftData);
+      const fullDraft = getFullFormData(form);
+      const currentDraft = getDraft() || {};
+      saveDraft({ ...currentDraft, ...fullDraft });
     });
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const brief = getFormData(form);
+      const brief = getDraft() || getFullFormData(form);
       
       showToast('Building documentary shot plan...', 'info');
 
@@ -127,6 +173,7 @@ function attachEventListeners() {
         const shots = generateShotPlan(brief);
         state.activeProject = { brief, shots };
         saveProjectToHistory(state.activeProject);
+        state.wizardStep = 1;
         navigateTo('results');
         showToast('Documentary shot plan generated successfully!', 'success');
       }, 400);
@@ -197,21 +244,30 @@ function attachEventListeners() {
   });
 }
 
-/**
- * Extracts form field data into an object
- */
-function getFormData(form) {
+function getStep1FormData(form) {
   return {
     projectName: form.querySelector('#projectName')?.value || '',
     topic: form.querySelector('#topic')?.value || '',
     subject: form.querySelector('#subject')?.value || '',
-    location: form.querySelector('#location')?.value || '',
+    location: form.querySelector('#location')?.value || ''
+  };
+}
+
+function getStep2FormData(form) {
+  return {
     timeOfDay: form.querySelector('#timeOfDay')?.value || '',
     lighting: form.querySelector('#lighting')?.value || '',
     mood: form.querySelector('#mood')?.value || '',
     visualStyle: form.querySelector('#visualStyle')?.value || '',
     filmLook: form.querySelector('#filmLook')?.value || '',
     aspectRatio: form.querySelector('#aspectRatio')?.value || '16:9'
+  };
+}
+
+function getFullFormData(form) {
+  return {
+    ...getStep1FormData(form),
+    ...getStep2FormData(form)
   };
 }
 

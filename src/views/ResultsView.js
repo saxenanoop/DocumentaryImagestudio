@@ -1,6 +1,6 @@
 /**
  * Results View Component
- * Displays the 3-shot documentary plan with prompt studio tools and disclosure captions.
+ * Displays the 3-shot documentary plan with prompt studio tools, storytelling arc badges, and ethical disclosure captions.
  */
 import { renderVisualPreviewCard } from '../components/CanvasPreview.js';
 
@@ -9,12 +9,12 @@ export function renderResultsView(projectData) {
 
   // Determine sample images matching presets if applicable
   const getSampleForShot = (shotId) => {
-    if (brief.topic.toLowerCase().includes('seed') || brief.topic.toLowerCase().includes('food') || brief.topic.toLowerCase().includes('urban')) {
+    if (brief.topic.toLowerCase().includes('seed') || brief.topic.toLowerCase().includes('food') || brief.topic.toLowerCase().includes('urban') || brief.topic.toLowerCase().includes('agriculture')) {
       if (shotId === 'establishing') return '/samples/social_doc.jpg';
       if (shotId === 'medium') return '/samples/social_doc.jpg';
       if (shotId === 'detail') return '/samples/detail_doc.jpg';
     }
-    if (brief.topic.toLowerCase().includes('climate') || brief.topic.toLowerCase().includes('water') || brief.topic.toLowerCase().includes('wetland')) {
+    if (brief.topic.toLowerCase().includes('climate') || brief.topic.toLowerCase().includes('water') || brief.topic.toLowerCase().includes('wetland') || brief.topic.toLowerCase().includes('mangrove')) {
       if (shotId === 'establishing') return '/samples/climate_doc.jpg';
       if (shotId === 'medium') return '/samples/climate_doc.jpg';
       if (shotId === 'detail') return '/samples/detail_doc.jpg';
@@ -49,7 +49,7 @@ export function renderResultsView(projectData) {
       </div>
 
       <!-- Project Summary Card -->
-      <div class="card" style="margin-bottom: 2.5rem; background: var(--bg-surface); border-left: 4px solid var(--primary);">
+      <div class="card" style="margin-bottom: 2rem; background: var(--bg-surface); border-left: 4px solid var(--primary);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
           <div>
             <h2 style="font-size: 1.35rem; margin-bottom: 0.25rem;">${brief.projectName || brief.topic}</h2>
@@ -57,13 +57,13 @@ export function renderResultsView(projectData) {
           </div>
           <a href="#create" class="btn btn-secondary btn-sm" data-route="create">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            Edit Brief
+            Edit Story Brief
           </a>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; font-size: 0.875rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
           <div>
-            <span class="text-muted" style="display: block;">Subject:</span>
+            <span class="text-muted" style="display: block;">Subject & Agency:</span>
             <strong>${brief.subject}</strong>
           </div>
           <div>
@@ -71,7 +71,7 @@ export function renderResultsView(projectData) {
             <strong>${brief.location}</strong>
           </div>
           <div>
-            <span class="text-muted" style="display: block;">Style & Mood:</span>
+            <span class="text-muted" style="display: block;">Mood & Style:</span>
             <strong>${brief.mood}</strong>
           </div>
           <div>
@@ -81,8 +81,21 @@ export function renderResultsView(projectData) {
         </div>
       </div>
 
-      <!-- Prompt Studio Mode Banner -->
-      <div class="notice-pill" style="width: 100%; justify-content: space-between; flex-wrap: wrap;">
+      <!-- Storytelling Arc Guide Legend -->
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; background: var(--bg-subtle); padding: 1rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; width: 100%;">
+          <span>📸 DOCUMENTARY NARRATIVE ARC</span>
+          <span style="font-weight: normal; font-size: 0.775rem;">(Textbook 3-Shot Visual Structure)</span>
+        </div>
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-main);">
+          <div>🗺️ <strong>1. Establishing Shot:</strong> Context & Scale</div>
+          <div>🤝 <strong>2. Medium Shot:</strong> Human Relationship & Action</div>
+          <div>🔍 <strong>3. Detail Shot:</strong> Tactile Emotion & Objects</div>
+        </div>
+      </div>
+
+      <!-- Prompt Studio Active Notice Banner -->
+      <div class="notice-pill" style="width: 100%; justify-content: space-between; flex-wrap: wrap; margin-bottom: 2rem;">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           <span><strong>Prompt Studio Active:</strong> Prompts are constructed using real documentary photography principles. Copy and paste into Midjourney, DALL-E, Stable Diffusion, or your preferred AI image generator.</span>
@@ -115,9 +128,14 @@ export function renderResultsView(projectData) {
                 <!-- Left: Editable Prompt & Details -->
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                   <div>
-                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.4rem;">
-                      Generated Documentary Prompt (Editable)
-                    </label>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+                      <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+                        Generated Documentary Prompt
+                      </label>
+                      <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                        ✏️ Click box to edit
+                      </span>
+                    </div>
                     <div class="prompt-box">
                       <textarea class="prompt-textarea" id="prompt-text-${shot.id}">${shot.prompt}</textarea>
                     </div>
@@ -132,8 +150,8 @@ export function renderResultsView(projectData) {
                     <div class="disclosure-text">
                       "${shot.disclosureCaption}"
                     </div>
-                    <button type="button" class="btn btn-ghost btn-sm btn-copy-caption" data-caption-text="${shot.disclosureCaption}" style="align-self: flex-start; padding: 0.2rem 0.5rem; font-size: 0.775rem;">
-                      Copy Caption
+                    <button type="button" class="btn btn-ghost btn-sm btn-copy-caption" data-caption-text="${shot.disclosureCaption}" style="align-self: flex-start; padding: 0.25rem 0.6rem; font-size: 0.775rem;">
+                      Copy Caption Snippet
                     </button>
                   </div>
                 </div>
