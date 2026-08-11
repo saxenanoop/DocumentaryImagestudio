@@ -9,18 +9,18 @@
  * @param {Object} brief - The form input brief object
  * @returns {Array} Array of 3 shot objects
  */
-export function generateShotPlan(brief) {
-  const {
-    topic = "Documentary Project",
-    subject = "Subject",
-    location = "Environment",
-    timeOfDay = "Daylight",
-    lighting = "Available natural light",
-    mood = "Authentic",
-    visualStyle = "Documentary photojournalism",
-    filmLook = "Warm & Hopeful Daylight (Kodak Portra 400 35mm)",
-    aspectRatio = "16:9"
-  } = brief;
+export function generateShotPlan(brief = {}) {
+  // Sanitize all inputs with robust fallback defaults to prevent empty values or gaps
+  const projectName = (brief.projectName && brief.projectName.trim()) || "Documentary Visual Story";
+  const topic = (brief.topic && brief.topic.trim()) || "Community Resilience & Social Impact";
+  const subject = (brief.subject && brief.subject.trim()) || "Community members actively collaborating together";
+  const location = (brief.location && brief.location.trim()) || "Local community setting";
+  const timeOfDay = (brief.timeOfDay && brief.timeOfDay.trim()) || "Late afternoon golden hour";
+  const lighting = (brief.lighting && brief.lighting.trim()) || "Warm available natural light";
+  const mood = (brief.mood && brief.mood.trim()) || "Dignified, collaborative, hopeful";
+  const visualStyle = (brief.visualStyle && brief.visualStyle.trim()) || "Unposed social realism, candid documentary photojournalism";
+  const filmLook = (brief.filmLook && brief.filmLook.trim()) || "Warm & Hopeful Daylight (Kodak Portra 400 35mm)";
+  const aspectRatio = (brief.aspectRatio && brief.aspectRatio.trim()) || "16:9";
 
   // Dignity & Respect Safeguard Prompt Component
   const dignitySafeguard = "dignified posture, active community agency, respectful observational distance, un-sensationalized storytelling";

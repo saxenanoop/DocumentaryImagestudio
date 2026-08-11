@@ -675,6 +675,10 @@ textarea.form-control {
   gap: 1.5rem;
 }
 
+.step-hidden {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
   .grid-2, .grid-3 {
     grid-template-columns: 1fr;

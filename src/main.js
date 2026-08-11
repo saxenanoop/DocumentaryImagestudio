@@ -99,11 +99,13 @@ function attachEventListeners() {
       state.selectedPresetId = presetId;
       const preset = DOCUMENTARY_PRESETS.find(p => p.id === presetId);
       if (preset) {
-        const draft = getDraft() || {};
-        saveDraft({ ...draft, ...preset.defaults });
+        const form = document.getElementById('create-project-form');
+        if (form) {
+          autofillFormInputs(form, preset.defaults);
+          saveDraft(getFullFormData(form));
+        }
       }
-      renderApp();
-      showToast(`Autofilled with ${presetId.toUpperCase()} preset`, 'success');
+      showToast(`Autofilled form with ${presetId.toUpperCase()} preset`, 'success');
     });
   });
 
@@ -115,26 +117,36 @@ function attachEventListeners() {
       const ratio = btn.getAttribute('data-ratio');
       const hiddenInput = document.getElementById('aspectRatio');
       if (hiddenInput) hiddenInput.value = ratio;
+      const form = document.getElementById('create-project-form');
+      if (form) saveDraft(getFullFormData(form));
     });
   });
 
-  // 2-Step Wizard Navigation
+  // 2-Step Wizard Navigation Buttons
   const btnNext = document.getElementById('btn-next-step');
   if (btnNext) {
     btnNext.addEventListener('click', () => {
       const form = document.getElementById('create-project-form');
       if (form) {
-        const step1Data = getStep1FormData(form);
-        const currentDraft = getDraft() || {};
-        saveDraft({ ...currentDraft, ...step1Data });
+        const currentData = getFullFormData(form);
+        saveDraft(currentData);
         
-        // Simple Step 1 validation
-        if (!step1Data.topic || !step1Data.subject) {
-          showToast('Please enter topic and subject before proceeding', 'info');
+        if (!currentData.topic || !currentData.subject) {
+          showToast('Please enter documentary topic and subject agency', 'info');
           return;
         }
+        
+        // Switch to Step 2 without destroying DOM inputs
         state.wizardStep = 2;
-        renderApp();
+        const s1 = document.getElementById('step-1-container');
+        const s2 = document.getElementById('step-2-container');
+        if (s1 && s2) {
+          s1.classList.add('step-hidden');
+          s2.classList.remove('step-hidden');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          renderApp();
+        }
       }
     });
   }
@@ -144,12 +156,18 @@ function attachEventListeners() {
     btnBack.addEventListener('click', () => {
       const form = document.getElementById('create-project-form');
       if (form) {
-        const step2Data = getStep2FormData(form);
-        const currentDraft = getDraft() || {};
-        saveDraft({ ...currentDraft, ...step2Data });
+        saveDraft(getFullFormData(form));
       }
       state.wizardStep = 1;
-      renderApp();
+      const s1 = document.getElementById('step-1-container');
+      const s2 = document.getElementById('step-2-container');
+      if (s1 && s2) {
+        s2.classList.add('step-hidden');
+        s1.classList.remove('step-hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        renderApp();
+      }
     });
   }
 
@@ -158,13 +176,12 @@ function attachEventListeners() {
   if (form) {
     form.addEventListener('input', () => {
       const fullDraft = getFullFormData(form);
-      const currentDraft = getDraft() || {};
-      saveDraft({ ...currentDraft, ...fullDraft });
+      saveDraft(fullDraft);
     });
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const brief = getDraft() || getFullFormData(form);
+      const brief = getFullFormData(form);
       
       showToast('Building documentary shot plan...', 'info');
 
@@ -176,7 +193,7 @@ function attachEventListeners() {
         state.wizardStep = 1;
         navigateTo('results');
         showToast('Documentary shot plan generated successfully!', 'success');
-      }, 400);
+      }, 300);
     });
   }
 
@@ -244,17 +261,16 @@ function attachEventListeners() {
   });
 }
 
-function getStep1FormData(form) {
+/**
+ * Extracts 100% of form input data directly from the DOM
+ */
+function getFullFormData(form) {
+  if (!form) return getDraft() || {};
   return {
     projectName: form.querySelector('#projectName')?.value || '',
     topic: form.querySelector('#topic')?.value || '',
     subject: form.querySelector('#subject')?.value || '',
-    location: form.querySelector('#location')?.value || ''
-  };
-}
-
-function getStep2FormData(form) {
-  return {
+    location: form.querySelector('#location')?.value || '',
     timeOfDay: form.querySelector('#timeOfDay')?.value || '',
     lighting: form.querySelector('#lighting')?.value || '',
     mood: form.querySelector('#mood')?.value || '',
@@ -264,11 +280,17 @@ function getStep2FormData(form) {
   };
 }
 
-function getFullFormData(form) {
-  return {
-    ...getStep1FormData(form),
-    ...getStep2FormData(form)
-  };
+/**
+ * Autofills all form inputs in the DOM
+ */
+function autofillFormInputs(form, defaults) {
+  if (!form || !defaults) return;
+  Object.keys(defaults).forEach(key => {
+    const el = form.querySelector(`#${key}`);
+    if (el) {
+      el.value = defaults[key];
+    }
+  });
 }
 
 /**
