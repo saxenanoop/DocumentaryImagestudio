@@ -142,8 +142,29 @@ function attachEventListeners() {
         const currentData = getFullFormData(form);
         saveDraft(currentData);
         
-        if (!currentData.topic || !currentData.subject) {
+        // Inline Validation Highlighting
+        const topicInput = document.getElementById('topic');
+        const subjectInput = document.getElementById('subject');
+        
+        let hasError = false;
+        if (!currentData.topic && topicInput) {
+          topicInput.classList.add('input-error');
+          hasError = true;
+        } else if (topicInput) {
+          topicInput.classList.remove('input-error');
+        }
+
+        if (!currentData.subject && subjectInput) {
+          subjectInput.classList.add('input-error');
+          hasError = true;
+        } else if (subjectInput) {
+          subjectInput.classList.remove('input-error');
+        }
+        
+        if (hasError) {
           showToast('Please enter documentary topic and subject agency', 'info');
+          if (!currentData.topic && topicInput) topicInput.focus();
+          else if (!currentData.subject && subjectInput) subjectInput.focus();
           return;
         }
         
@@ -182,10 +203,13 @@ function attachEventListeners() {
     });
   }
 
-  // Form Input Change Auto-Save Draft
+  // Form Input Change Auto-Save Draft & Remove Error Highlights
   const form = document.getElementById('create-project-form');
   if (form) {
-    form.addEventListener('input', () => {
+    form.addEventListener('input', (e) => {
+      if (e.target && e.target.classList.contains('input-error')) {
+        e.target.classList.remove('input-error');
+      }
       const fullDraft = getFullFormData(form);
       saveDraft(fullDraft);
     });
@@ -210,23 +234,23 @@ function attachEventListeners() {
     });
   }
 
-  // Copy Prompt Button Handler
+  // Copy Prompt Button Handler with Inline Button State Feedback
   document.querySelectorAll('.btn-copy-prompt').forEach(btn => {
     btn.addEventListener('click', () => {
       const shotId = btn.getAttribute('data-prompt-id');
       const textarea = document.getElementById(`prompt-text-${shotId}`);
       if (textarea) {
-        copyToClipboard(textarea.value, 'Prompt copied to clipboard!');
+        copyToClipboard(textarea.value, 'Prompt copied to clipboard!', btn);
       }
     });
   });
 
-  // Copy Disclosure Caption Handler
+  // Copy Disclosure Caption Handler with Inline Feedback
   document.querySelectorAll('.btn-copy-caption').forEach(btn => {
     btn.addEventListener('click', () => {
       const caption = btn.getAttribute('data-caption-text');
       if (caption) {
-        copyToClipboard(caption, 'Ethical disclosure caption copied!');
+        copyToClipboard(caption, 'Ethical disclosure caption copied!', btn);
       }
     });
   });
@@ -236,7 +260,7 @@ function attachEventListeners() {
   if (btnCopyAll && state.activeProject) {
     btnCopyAll.addEventListener('click', () => {
       const markdown = generatePromptSheetMarkdown(state.activeProject.brief, state.activeProject.shots);
-      copyToClipboard(markdown, 'All 3 documentary prompts copied as Markdown!');
+      copyToClipboard(markdown, 'All 3 documentary prompts copied as Markdown!', btnCopyAll);
     });
   }
 
@@ -316,21 +340,34 @@ function navigateTo(route) {
 }
 
 /**
- * Clipboard Copy Helper
+ * Clipboard Copy Helper with Inline Button State Feedback
  */
-function copyToClipboard(text, successMsg) {
+function copyToClipboard(text, successMsg, targetBtn = null) {
+  const triggerSuccessState = () => {
+    showToast(successMsg, 'success');
+    if (targetBtn) {
+      const originalHTML = targetBtn.innerHTML;
+      targetBtn.classList.add('btn-copy-success');
+      targetBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied! ✓`;
+      setTimeout(() => {
+        targetBtn.classList.remove('btn-copy-success');
+        targetBtn.innerHTML = originalHTML;
+      }, 2000);
+    }
+  };
+
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => {
-      showToast(successMsg, 'success');
+      triggerSuccessState();
     }).catch(() => {
-      fallbackCopyTextToClipboard(text, successMsg);
+      fallbackCopyTextToClipboard(text, successMsg, targetBtn);
     });
   } else {
-    fallbackCopyTextToClipboard(text, successMsg);
+    fallbackCopyTextToClipboard(text, successMsg, targetBtn);
   }
 }
 
-function fallbackCopyTextToClipboard(text, successMsg) {
+function fallbackCopyTextToClipboard(text, successMsg, targetBtn = null) {
   const textArea = document.createElement("textarea");
   textArea.value = text;
   textArea.style.position = "fixed";
@@ -340,6 +377,15 @@ function fallbackCopyTextToClipboard(text, successMsg) {
   try {
     document.execCommand('copy');
     showToast(successMsg, 'success');
+    if (targetBtn) {
+      const originalHTML = targetBtn.innerHTML;
+      targetBtn.classList.add('btn-copy-success');
+      targetBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied! ✓`;
+      setTimeout(() => {
+        targetBtn.classList.remove('btn-copy-success');
+        targetBtn.innerHTML = originalHTML;
+      }, 2000);
+    }
   } catch (err) {
     showToast('Failed to copy', 'error');
   }

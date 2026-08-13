@@ -5,15 +5,24 @@ export function renderHeader(currentRoute = "home") {
   return `
     <header class="site-header">
       <div class="container header-inner">
-        <a href="#home" class="brand-link" data-route="home">
+        <a href="#home" class="brand-link" data-route="home" title="Documentary Image Studio Home">
           <div class="brand-logo">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-              <circle cx="12" cy="13" r="3"/>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 3a9 9 0 0 1 6.36 2.64"/>
+              <path d="M18.36 5.64 12 12"/>
+              <path d="M21 12a9 9 0 0 1-2.64 6.36"/>
+              <path d="M18.36 18.36 12 12"/>
+              <path d="M12 21a9 9 0 0 1-6.36-2.64"/>
+              <path d="M5.64 18.36 12 12"/>
+              <path d="M3 12a9 9 0 0 1 2.64-6.36"/>
+              <path d="M5.64 5.64 12 12"/>
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
             </svg>
           </div>
           <div>
-            <span class="brand-title">Documentary Image Studio</span>
+            <div class="brand-title">Documentary Image Studio</div>
+            <div class="brand-subtitle">Ethical AI Visuals for Impact Storytelling</div>
           </div>
           <span class="ethical-pill">Ethical AI</span>
         </a>
@@ -46,3 +55,4 @@ export function renderHeader(currentRoute = "home") {
     </header>
   `;
 }
+

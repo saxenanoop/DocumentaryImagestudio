@@ -8,10 +8,10 @@ export function renderHistoryView() {
 
   return `
     <div class="container-narrow">
-      <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+      <div style="margin-bottom: 2.25rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
         <div>
-          <h1 style="font-size: 2.25rem; margin-bottom: 0.25rem;">Saved Local Drafts</h1>
-          <p class="text-muted">Projects and prompt plans stored locally in your browser cache.</p>
+          <h1 style="font-size: 2.35rem; margin-bottom: 0.35rem;">Saved Local Drafts</h1>
+          <p class="text-muted" style="font-size: 1.05rem;">Projects and 3-shot prompt plans stored locally in your browser cache.</p>
         </div>
         <a href="#create" class="btn btn-primary" data-route="create">
           + New Project
@@ -19,33 +19,38 @@ export function renderHistoryView() {
       </div>
 
       ${history.length === 0 ? `
-        <div class="card text-center" style="padding: 3rem 1.5rem;">
-          <div style="width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--bg-subtle); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; color: var(--text-muted);">
+        <div class="card text-center" style="padding: 3.5rem 2rem;">
+          <div style="width: 4rem; height: 4rem; border-radius: 50%; background: var(--primary-bg-subtle); border: 1px solid var(--primary-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; color: var(--primary);">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
-          <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem;">No Saved Projects Yet</h3>
-          <p class="text-muted" style="max-width: 400px; margin: 0 auto 1.5rem auto;">
-            When you create documentary briefs, your shot plans will appear here for easy access and reuse.
+          <h3 style="font-size: 1.35rem; margin-bottom: 0.5rem; font-family: var(--font-serif);">No Saved Projects Yet</h3>
+          <p class="text-muted" style="max-width: 440px; margin: 0 auto 1.75rem auto; font-size: 0.95rem;">
+            When you create documentary briefs, your 3-shot plans will appear here in your film archive for easy access and reuse.
           </p>
-          <a href="#create" class="btn btn-primary" data-route="create">Create First Project</a>
+          <a href="#create" class="btn btn-primary btn-lg" data-route="create">Create First Project</a>
         </div>
       ` : `
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
           ${history.map(item => `
-            <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;" id="history-item-${item.id}">
+            <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem; padding: 1.65rem;" id="history-item-${item.id}">
               <div>
-                <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">
-                  Saved ${new Date(item.createdAt).toLocaleDateString()}
-                </span>
-                <h3 style="font-size: 1.15rem; color: var(--text-main); margin: 0.2rem 0;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                  <span class="shot-badge" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                    Saved ${new Date(item.createdAt).toLocaleDateString()}
+                  </span>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+                    ${item.shots ? item.shots.length : 3} Shots Arc
+                  </span>
+                </div>
+                <h3 style="font-size: 1.25rem; color: var(--primary); margin: 0.2rem 0; font-family: var(--font-serif);">
                   ${item.brief.projectName || item.brief.topic}
                 </h3>
-                <p class="text-muted" style="font-size: 0.875rem;">
-                  Topic: ${item.brief.topic} • ${item.shots ? item.shots.length : 3} Shots
+                <p class="text-muted" style="font-size: 0.9rem;">
+                  Topic: <strong>${item.brief.topic}</strong>
                 </p>
               </div>
 
-              <div style="display: flex; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.65rem;">
                 <button type="button" class="btn btn-secondary btn-sm btn-open-project" data-project-id="${item.id}">
                   Open Plan →
                 </button>
@@ -60,3 +65,4 @@ export function renderHistoryView() {
     </div>
   `;
 }
+

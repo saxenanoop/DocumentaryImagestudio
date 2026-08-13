@@ -1,5 +1,5 @@
 /**
- * Create View Component (DOM-Preserved 2-Step Wizard with Clean Initial State)
+ * Create View Component (DOM-Preserved 2-Step Wizard)
  */
 import { DOCUMENTARY_PRESETS } from '../presets.js';
 import { getDraft } from '../storage.js';
@@ -33,56 +33,54 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
 
   return `
     <div class="container-narrow">
-      <div style="margin-bottom: 1.5rem; text-align: center;">
-        <h1 style="font-size: 2.25rem; margin-bottom: 0.5rem;">Create Documentary Visual</h1>
-        <p class="text-muted" style="font-size: 1.05rem;">
-          Build structured documentary-style prompts designed for authentic impact storytelling.
+      <div style="margin-bottom: 2rem; text-align: center;">
+        <h1 style="font-size: 2.35rem; margin-bottom: 0.5rem;">Create Documentary Visual Plan</h1>
+        <p class="text-muted" style="font-size: 1.05rem; max-width: 600px; margin: 0 auto;">
+          Build structured documentary-style prompts designed for authentic optics, active human agency, and ethical storytelling.
         </p>
       </div>
 
       <!-- Step Wizard Progress Indicator -->
-      <div style="margin-bottom: 2rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--text-muted);">
-          <span style="${currentStep === 1 ? 'color: var(--primary); font-weight: 700;' : ''}">
-            Step 1: Story Brief & Subject
-          </span>
-          <span style="${currentStep === 2 ? 'color: var(--primary); font-weight: 700;' : ''}">
-            Step 2: Mood & Aesthetics
-          </span>
+      <div class="wizard-step-bar">
+        <div class="wizard-step-item ${currentStep === 1 ? 'active' : ''}">
+          <span class="wizard-step-num">1</span>
+          <span>Story Brief & Subject Agency</span>
         </div>
-        <div style="height: 6px; background: var(--border-light); border-radius: 99px; overflow: hidden; display: flex;">
-          <div style="width: ${currentStep === 1 ? '50%' : '100%'}; background: var(--primary); transition: width 0.3s ease;"></div>
+        <div style="width: 2rem; height: 1px; background: var(--border-medium);"></div>
+        <div class="wizard-step-item ${currentStep === 2 ? 'active' : ''}">
+          <span class="wizard-step-num">2</span>
+          <span>Lighting, Optics & Film Stock</span>
         </div>
       </div>
 
       <!-- Dignity & Ethics Tip Callout -->
-      <div class="ethics-banner" style="margin-bottom: 1.75rem; background: var(--primary-bg-subtle); border-color: var(--primary-border); color: var(--primary-hover);">
+      <div class="ethics-banner" style="margin-bottom: 2rem; background: var(--primary-bg-subtle); border-color: var(--primary-border); color: var(--primary-hover);">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
         </svg>
-        <div style="font-size: 0.85rem;">
-          <strong>Dignity & Ethics Tip:</strong> Focus on <strong>subject agency and active community leadership</strong> rather than passive victimhood or sensationalized distress.
+        <div style="font-size: 0.85rem; line-height: 1.45;">
+          <strong>Dignity & Ethics Framing:</strong> Focus on <strong>subject agency, active community leadership, and unposed authenticity</strong> rather than passive distress or sensationalism.
         </div>
       </div>
 
       <!-- Main Form (All inputs preserved in DOM) -->
-      <form id="create-project-form" class="card" style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <form id="create-project-form" class="card" style="display: flex; flex-direction: column; gap: 1.5rem; padding: 2.25rem;">
         <input type="hidden" id="wizard-step" value="${currentStep}" />
 
         <!-- STEP 1 CONTAINER -->
         <div id="step-1-container" class="${currentStep === 1 ? '' : 'step-hidden'}">
-          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
-            <h3 style="font-size: 1.2rem; color: var(--primary); font-family: var(--font-sans); font-weight: 700;">
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.25rem; color: var(--primary); font-family: var(--font-serif); font-weight: 700;">
               1. Story Brief & Active Agency
             </h3>
-            <span class="badge" style="background: var(--bg-subtle); color: var(--text-muted); font-size: 0.75rem;">Step 1 of 2</span>
+            <span class="shot-badge">Step 1 of 2</span>
           </div>
 
           <!-- Preset Quick Selection Chips -->
-          <div style="margin-bottom: 1.5rem; background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
-            <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-              <span>DOCUMENTARY CATEGORY PRESETS</span>
-              <span style="font-size: 0.75rem; font-weight: normal;">Click to autofill sample brief</span>
+          <div style="margin-bottom: 1.75rem; background: var(--bg-subtle); padding: 1.15rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono);">
+              <span>QUICK AUTOFILL PRESETS</span>
+              <span style="font-weight: normal; font-size: 0.75rem;">Click chip to populate sample brief</span>
             </div>
             <div class="preset-chips" style="margin-bottom: 0;">
               ${DOCUMENTARY_PRESETS.map(preset => `
@@ -96,17 +94,17 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
           <div class="form-group">
             <label class="form-label" for="projectName">
               Project / Campaign Title
-              <span class="form-hint">Internal reference for your team</span>
+              <span class="form-hint">Internal reference name</span>
             </label>
-            <input type="text" id="projectName" class="form-control" value="${initialValues.projectName}" placeholder="e.g. Coastal Mangrove Restoration Brief" required />
+            <input type="text" id="projectName" class="form-control" value="${initialValues.projectName}" placeholder="e.g. Mangrove Coastal Community Brief" required />
           </div>
 
           <div class="form-group">
             <label class="form-label" for="topic">
               Documentary Topic / Issue
-              <span class="form-hint">The central story or theme</span>
+              <span class="form-hint">The core story or systemic issue</span>
             </label>
-            <input type="text" id="topic" class="form-control" value="${initialValues.topic}" placeholder="e.g. Traditional Seed Conservation & Food Security" required />
+            <input type="text" id="topic" class="form-control" value="${initialValues.topic}" placeholder="e.g. Traditional Seed Conservation & Food Sovereignty" required />
           </div>
 
           <div class="form-group">
@@ -114,43 +112,42 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
               Core Subject & Active Agency
               <span class="form-hint">What is the subject actively doing, leading, or building?</span>
             </label>
-            <textarea id="subject" class="form-control" rows="3" placeholder="e.g. Master artisan weaver passionately guiding a young apprentice at a wooden handloom" required>${initialValues.subject}</textarea>
+            <textarea id="subject" class="form-control" rows="3" placeholder="e.g. Master artisan weaver passionately guiding a young apprentice at a traditional wooden loom" required>${initialValues.subject}</textarea>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="location">
               Location / Environment
-              <span class="form-hint">Specific physical or geographical setting</span>
+              <span class="form-hint">Specific physical, architectural, or geographical setting</span>
             </label>
-            <input type="text" id="location" class="form-control" value="${initialValues.location}" placeholder="e.g. Rustic wooden seed repository barn in a mountain valley" required />
+            <input type="text" id="location" class="form-control" value="${initialValues.location}" placeholder="e.g. High-altitude seed vault barn in a sunlit mountain valley" required />
           </div>
 
-          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light); text-align: right;">
+          <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light); text-align: right;">
             <button type="button" class="btn btn-primary btn-lg" id="btn-next-step" style="width: 100%;">
-              Next: Mood & Aesthetics →
+              Next: Optics & Film Look →
             </button>
           </div>
         </div>
 
         <!-- STEP 2 CONTAINER -->
         <div id="step-2-container" class="${currentStep === 2 ? '' : 'step-hidden'}">
-          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-bottom: 1.25rem;">
-            <h3 style="font-size: 1.2rem; color: var(--primary); font-family: var(--font-sans); font-weight: 700;">
-              2. Mood, Aesthetics & Format
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.25rem; color: var(--primary); font-family: var(--font-serif); font-weight: 700;">
+              2. Lighting, Aesthetics & Aspect Ratio
             </h3>
-            <span class="badge" style="background: var(--bg-subtle); color: var(--text-muted); font-size: 0.75rem;">Step 2 of 2</span>
+            <span class="shot-badge">Step 2 of 2</span>
           </div>
 
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label" for="timeOfDay">
-                Time of Day
-                <span class="form-hint" title="Natural available light cycle">ℹ️</span>
+                Time of Day / Atmosphere
               </label>
               <select id="timeOfDay" class="form-control">
                 <option value="Early morning sunrise & morning mist" ${initialValues.timeOfDay.includes('Early morning') ? 'selected' : ''}>Early Morning Sunrise & Mist</option>
                 <option value="Late afternoon golden hour" ${initialValues.timeOfDay.includes('golden hour') || initialValues.timeOfDay.includes('Late afternoon') ? 'selected' : ''}>Late Afternoon Golden Hour</option>
-                <option value="Midday natural daylight" ${initialValues.timeOfDay.includes('Midday') ? 'selected' : ''}>Midday Natural Light</option>
+                <option value="Midday natural daylight" ${initialValues.timeOfDay.includes('Midday') ? 'selected' : ''}>Midday Natural Daylight</option>
                 <option value="Overcast diffused light" ${initialValues.timeOfDay.includes('Overcast') ? 'selected' : ''}>Overcast Soft Daylight</option>
                 <option value="Blue hour twilight" ${initialValues.timeOfDay.includes('Blue hour') ? 'selected' : ''}>Blue Hour Twilight</option>
                 <option value="Night atmosphere with artificial work lights" ${initialValues.timeOfDay.includes('Night') ? 'selected' : ''}>Night Worklights</option>
@@ -160,7 +157,6 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
             <div class="form-group">
               <label class="form-label" for="lighting">
                 Lighting Condition
-                <span class="form-hint">Available light quality</span>
               </label>
               <input type="text" id="lighting" class="form-control" value="${initialValues.lighting}" placeholder="e.g. Warm sunlight filtering through wooden slats" />
             </div>
@@ -168,12 +164,12 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
 
           <div class="grid-2">
             <div class="form-group">
-              <label class="form-label" for="mood">Emotional Mood</label>
+              <label class="form-label" for="mood">Emotional Tone</label>
               <input type="text" id="mood" class="form-control" value="${initialValues.mood}" placeholder="e.g. Collaborative, dignified, hopeful" />
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="visualStyle">Visual Framing Style</label>
+              <label class="form-label" for="visualStyle">Framing Style</label>
               <input type="text" id="visualStyle" class="form-control" value="${initialValues.visualStyle}" placeholder="e.g. Unposed observational photojournalism" />
             </div>
           </div>
@@ -181,12 +177,12 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
           <!-- Intent-Based Film Stock Dropdown -->
           <div class="form-group">
             <label class="form-label" for="filmLook">
-              Color & Tone Intent (Film Look)
-              <span class="form-hint">Controls warmth, grain, and color emotion</span>
+              Color & Grain Intent (Film Stock Emulation)
+              <span class="form-hint">Controls color warmth, grain density, and tone</span>
             </label>
             <select id="filmLook" class="form-control">
               <option value="Warm & Hopeful Daylight (Kodak Portra 400 35mm)" ${initialValues.filmLook.includes('Portra 400') || initialValues.filmLook.includes('Warm') ? 'selected' : ''}>
-                ☀️ Warm & Hopeful Daylight (Kodak Portra 400)
+                ☀️ Warm & Hopeful Daylight (Kodak Portra 400 35mm)
               </option>
               <option value="Cool & Natural Greens (Fujifilm Pro 400H)" ${initialValues.filmLook.includes('Fujifilm') || initialValues.filmLook.includes('Cool') ? 'selected' : ''}>
                 🌿 Cool & Natural Greens (Fujifilm Pro 400H)
@@ -203,32 +199,32 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
             </select>
           </div>
 
-          <!-- Aspect Ratio Segmented Control with Shape Icons -->
+          <!-- Aspect Ratio Segmented Control with SVG Frame Icons -->
           <div class="form-group">
-            <label class="form-label">Aspect Ratio / Media Format</label>
+            <label class="form-label">Aspect Ratio / Optical Frame</label>
             <input type="hidden" id="aspectRatio" value="${initialValues.aspectRatio}" />
             <div class="segmented-control">
-              <button type="button" class="segmented-option ${initialValues.aspectRatio === '16:9' ? 'active' : ''}" data-ratio="16:9" title="Widescreen Video & Banners">
-                ▭ 16:9 (Widescreen)
+              <button type="button" class="segmented-option ${initialValues.aspectRatio === '16:9' ? 'active' : ''}" data-ratio="16:9" title="Widescreen 16:9 Video & Banners">
+                <span class="ratio-frame-icon ratio-frame-16-9"></span> 16:9
               </button>
-              <button type="button" class="segmented-option ${initialValues.aspectRatio === '4:3' ? 'active' : ''}" data-ratio="4:3" title="Editorial Reports & Documents">
-                🔲 4:3 (Editorial)
+              <button type="button" class="segmented-option ${initialValues.aspectRatio === '4:3' ? 'active' : ''}" data-ratio="4:3" title="Editorial 4:3 Document Reports">
+                <span class="ratio-frame-icon ratio-frame-4-3"></span> 4:3
               </button>
-              <button type="button" class="segmented-option ${initialValues.aspectRatio === '1:1' ? 'active' : ''}" data-ratio="1:1" title="Square Social Feed">
-                ◽ 1:1 (Square)
+              <button type="button" class="segmented-option ${initialValues.aspectRatio === '1:1' ? 'active' : ''}" data-ratio="1:1" title="Square 1:1 Social Feed">
+                <span class="ratio-frame-icon ratio-frame-1-1"></span> 1:1
               </button>
-              <button type="button" class="segmented-option ${initialValues.aspectRatio === '3:2' ? 'active' : ''}" data-ratio="3:2" title="Classic Photography Print">
-                🖼️ 3:2 (Print)
+              <button type="button" class="segmented-option ${initialValues.aspectRatio === '3:2' ? 'active' : ''}" data-ratio="3:2" title="Classic 3:2 Photography Print">
+                <span class="ratio-frame-icon ratio-frame-3-2"></span> 3:2
               </button>
             </div>
           </div>
 
-          <div style="display: flex; gap: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light);">
+          <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light);">
             <button type="button" class="btn btn-secondary btn-lg" id="btn-back-step" style="flex: 1;">
               ← Back: Story Brief
             </button>
             <button type="submit" class="btn btn-primary btn-lg" style="flex: 2;">
-              Generate Documentary Prompts ✨
+              Generate 3-Shot Documentary Prompts ✨
             </button>
           </div>
         </div>
@@ -237,3 +233,4 @@ export function renderCreateView(selectedPresetId = null, currentStep = 1) {
     </div>
   `;
 }
+
