@@ -762,7 +762,7 @@ function renderStoryboardUploadHub(parseError) {
         <div class="hero-eyebrow">Pitch Video Director</div>
         <h1 class="hero-title">Compose Documentary Video Storyboards from Any Brochure</h1>
         <p class="hero-description">
-          Upload any campaign brochure, field report, or pitch brief to automatically generate a complete 60–120s documentary video sequence for <strong>Qwen Video</strong>, <strong>Kling AI</strong>, and <strong>Runway Gen-3</strong> with full camera, lens, and pacing control.
+          Upload any campaign brochure, field report, or pitch brief to automatically generate a complete 60–120s documentary video sequence for <strong>Google Gemini</strong>, <strong>Qwen Video</strong>, <strong>Kling AI</strong>, and <strong>Runway Gen-3</strong> with full camera, lens, and pacing control.
         </p>
       </div>
 

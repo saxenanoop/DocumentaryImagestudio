@@ -117,6 +117,7 @@ export const ATMOSPHERE_OPTIONS = [
 ];
 
 export const VIDEO_MODEL_OPTIONS = [
+  { id: "gemini", label: "Google Gemini", badge: "Veo AI" },
   { id: "qwen", label: "Qwen Video", badge: "Primary" },
   { id: "kling", label: "Kling AI", badge: "Kinetic" },
   { id: "runway", label: "Runway Gen-3", badge: "Cinematic" },
@@ -262,12 +263,16 @@ export function composeQwenVideoPrompt({
   const lines = [];
 
   // Model prefix optimization
-  if (targetModel === 'kling') {
+  if (targetModel === 'gemini') {
+    lines.push(`Cinematic documentary video clip, Google Gemini Video / Veo photoreal cinematography (${aspectRatio}, 1080p, ${pacing === 'slowmo' ? '60fps slow-motion' : '24fps'}).`);
+  } else if (targetModel === 'kling') {
     lines.push(`Cinematic documentary video clip, Kling AI 1.5 photoreal.`);
   } else if (targetModel === 'runway') {
     lines.push(`Documentary video shot on 35mm cinema prime, Runway Gen-3 photoreal.`);
   } else if (targetModel === 'sora') {
     lines.push(`Ultra-realistic observational documentary cinematography.`);
+  } else if (targetModel === 'luma') {
+    lines.push(`Documentary cinema video sequence, Luma Dream Machine photoreal motion (${aspectRatio}).`);
   } else {
     lines.push(`Documentary cinema video clip (${aspectRatio}, 1080p, ${pacing === 'slowmo' ? '60fps slow-motion' : '24fps'}).`);
   }
