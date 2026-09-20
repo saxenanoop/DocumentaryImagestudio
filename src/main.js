@@ -53,10 +53,12 @@ const state = {
   parseProgress: { stage: '', percent: 0 },
   parseError: null,
   isContextCollapsed: false,
+  isBriefExpanded: false,
   isDrawerOpen: false,
   isManualModalOpen: false,
   savedPrompts: loadSavedPrompts(),
   builderState: {
+    activeStep: 1,
     selectedThemeIndex: 0,
     setting: '',
     isCustomSetting: false,
@@ -93,12 +95,14 @@ function initBuilderFromCampaign(data, targetMode = null) {
   state.isParsing = false;
   state.parseError = null;
   state.isContextCollapsed = false;
+  state.isBriefExpanded = false;
 
   if (targetMode) {
     state.activeMode = targetMode;
   }
 
   state.builderState = {
+    activeStep: 1,
     selectedThemeIndex: 0,
     setting: settings[0] || 'Open-air community gathering space',
     isCustomSetting: false,
@@ -501,11 +505,11 @@ function attachEventListeners() {
     });
   }
 
-  // 6. Campaign Context Card Collapse Toggle
+  // 6. Campaign Brief Sticky Bar Toggle
   const btnToggleContextCard = document.getElementById('btn-toggle-context-card');
   if (btnToggleContextCard) {
     btnToggleContextCard.addEventListener('click', () => {
-      state.isContextCollapsed = !state.isContextCollapsed;
+      state.isBriefExpanded = !state.isBriefExpanded;
       renderApp();
     });
   }
@@ -514,6 +518,62 @@ function attachEventListeners() {
   // IMAGE PROMPT BUILDER EVENT LISTENERS
   // =========================================================================
   if (state.activeMode === 'image-prompts') {
+    // Stepper Navigation: Step Header Click
+    document.querySelectorAll('.studio-step-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-step-edit')) return;
+        const step = parseInt(header.getAttribute('data-step'), 10);
+        if (step && state.builderState.activeStep !== step) {
+          state.builderState.activeStep = step;
+          renderApp();
+        }
+      });
+    });
+
+    // Stepper Navigation: Step Edit Button Click
+    document.querySelectorAll('.btn-step-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const step = parseInt(btn.getAttribute('data-step-target'), 10);
+        if (step) {
+          state.builderState.activeStep = step;
+          renderApp();
+        }
+      });
+    });
+
+    // Stepper Navigation: Continue / Next Button Click
+    document.querySelectorAll('.btn-step-continue').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const nextStep = parseInt(btn.getAttribute('data-next-step'), 10);
+        if (nextStep) {
+          state.builderState.activeStep = nextStep;
+          renderApp();
+          const targetCard = document.getElementById(`step-card-${nextStep}`);
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    });
+
+    // Stepper Navigation: Back Button Click
+    document.querySelectorAll('.btn-step-back').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const prevStep = parseInt(btn.getAttribute('data-prev-step'), 10);
+        if (prevStep) {
+          state.builderState.activeStep = prevStep;
+          renderApp();
+          const targetCard = document.getElementById(`step-card-${prevStep}`);
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    });
+
     // Theme Cards Selection
     document.querySelectorAll('.theme-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -697,6 +757,38 @@ function attachEventListeners() {
         initBuilderFromCampaign(state.campaignData);
         renderApp();
         showToast('Builder fields reset to brochure defaults', 'info');
+      });
+    }
+
+    const btnExportDeckDirect = document.getElementById('btn-export-deck-direct');
+    if (btnExportDeckDirect && state.campaignData) {
+      btnExportDeckDirect.addEventListener('click', () => {
+        if (!state.savedPrompts || state.savedPrompts.length === 0) {
+          const currentTheme = state.campaignData.themes[state.builderState.selectedThemeIndex] || { label: "General" };
+          const currentSetting = state.builderState.isCustomSetting 
+            ? state.builderState.customSetting 
+            : (state.builderState.setting || state.campaignData.settings[0] || "");
+          const promptText = document.getElementById('live-prompt-textarea')?.value || getLivePromptText();
+
+          state.savedPrompts.unshift({
+            id: 'prompt-' + Date.now(),
+            type: 'image',
+            campaignName: state.campaignData.campaign_name,
+            themeLabel: currentTheme.label,
+            setting: currentSetting,
+            lighting: state.builderState.lighting,
+            moodKeywords: state.builderState.selectedMoods,
+            composition: state.builderState.composition,
+            promptText,
+            timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+          persistSavedPrompts(state.savedPrompts);
+        }
+        const md = exportDeckPromptsMarkdown(state.savedPrompts);
+        const filename = `Documentary_Deck_Prompts_${new Date().toISOString().slice(0, 10)}.md`;
+        downloadFile(md, filename, 'text/markdown');
+        showToast('Exported Deck to .md sheet', 'success');
+        renderApp();
       });
     }
   }
@@ -1457,6 +1549,14 @@ function updateLivePromptPreview() {
   const textarea = document.getElementById('live-prompt-textarea');
   if (textarea) {
     textarea.value = getLivePromptText();
+  }
+  const ratioBadge = document.querySelector('.studio-preview-sticky .ratio-badge');
+  if (ratioBadge) {
+    ratioBadge.textContent = state.builderState.aspectRatio || '16:9';
+  }
+  const strandBadge = document.querySelector('.studio-preview-sticky .strand-badge');
+  if (strandBadge && state.campaignData?.themes?.[state.builderState.selectedThemeIndex]) {
+    strandBadge.textContent = state.campaignData.themes[state.builderState.selectedThemeIndex].label;
   }
 }
 
