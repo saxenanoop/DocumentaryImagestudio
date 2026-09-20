@@ -1,23 +1,70 @@
 /**
  * Video Storyboard Builder Component
- * Storyboard generator for Qwen AI video generation with narrative arc configuration,
- * vertical shot sequence timeline, running pacing total, and pitch deck integration.
+ * Storyboard studio for Qwen, Kling, and Runway AI video generation with full granular control
+ * on themes, settings, subjects, camera dynamics, lens optics, lighting, pacing, and sound design.
  */
 import { renderCampaignContextCard } from './CampaignContextCard.js';
-import { NARRATIVE_ARCS, TRANSITION_OPTIONS, CAMERA_MOTION_PATTERNS } from '../services/videoStoryboardComposer.js';
+import {
+  NARRATIVE_ARCS,
+  TRANSITION_OPTIONS,
+  CAMERA_MOTION_PATTERNS,
+  CAMERA_LENS_OPTIONS,
+  LIGHTING_CONDITIONS,
+  PACING_OPTIONS,
+  ATMOSPHERE_OPTIONS,
+  VIDEO_MODEL_OPTIONS
+} from '../services/videoStoryboardComposer.js';
+import { SAMPLE_BROCHURES } from '../services/sampleBrochures.js';
 
 export function renderVideoStoryboardBuilder(state) {
-  const { campaignData, storyboardState, isContextCollapsed } = state;
+  const { campaignData, storyboardState, isContextCollapsed, isParsing, parseProgress, parseError } = state;
 
-  // 1. If no brochure is uploaded, show the upload guidance empty state
+  // 1. If parsing is in progress, show the dedicated loading animation
+  if (isParsing) {
+    return `
+      <div class="video-storyboard-view container">
+        <div class="parsing-card">
+          <div class="parsing-spinner-wrap">
+            <div class="editorial-spinner" role="status" aria-label="Parsing document"></div>
+          </div>
+          <h2 class="parsing-title">Structuring Video Storyboard</h2>
+          <p class="parsing-subtext">${parseProgress.stage || 'Analyzing campaign narrative strands for pitch video...'}</p>
+          
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" style="width: ${parseProgress.percent || 30}%"></div>
+          </div>
+
+          <div class="parsing-steps-list">
+            <div class="parsing-step ${parseProgress.percent >= 25 ? 'step-active' : ''}">
+              <span class="step-dot"></span>
+              <span>1. Extracting brochure narrative beats & emotional arc</span>
+            </div>
+            <div class="parsing-step ${parseProgress.percent >= 60 ? 'step-active' : ''}">
+              <span class="step-dot"></span>
+              <span>2. Generating scene-by-scene camera motion and pacing</span>
+            </div>
+            <div class="parsing-step ${parseProgress.percent >= 90 ? 'step-active' : ''}">
+              <span class="step-dot"></span>
+              <span>3. Composing AI video prompts & sound design cues</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. If no brochure is uploaded yet, render the embedded Video Storyboard Upload & Sample Hub (NO REDIRECT!)
   if (!campaignData) {
-    return renderStoryboardEmptyState();
+    return renderStoryboardUploadHub(parseError);
   }
 
   const themes = campaignData.themes || [];
+  const settings = campaignData.settings || [];
   const targetDuration = storyboardState.targetDuration || 90;
   const sceneCount = storyboardState.sceneCount || Math.max(4, Math.round(targetDuration / 10));
   const activeArc = storyboardState.narrativeArc || 'problem-solution-impact';
+  const targetModel = storyboardState.targetModel || 'qwen';
+  const aspectRatio = storyboardState.aspectRatio || '16:9';
   const selectedThemes = storyboardState.selectedThemes || themes.map(t => t.label);
   const scenes = storyboardState.scenes || [];
   const hasScenes = scenes.length > 0;
@@ -26,21 +73,17 @@ export function renderVideoStoryboardBuilder(state) {
   const currentTotalDuration = scenes.reduce((sum, s) => sum + (Number(s.duration) || 0), 0);
   const durationDelta = currentTotalDuration - targetDuration;
   
-  let pacingStatus = 'on-track';
   let pacingLabel = '● On Track';
   let pacingClass = 'pacing-on-track';
 
   if (hasScenes) {
     if (Math.abs(durationDelta) <= 3) {
-      pacingStatus = 'on-track';
       pacingLabel = `✓ On Track (${currentTotalDuration}s)`;
       pacingClass = 'pacing-on-track';
     } else if (durationDelta > 3) {
-      pacingStatus = 'over';
       pacingLabel = `▲ Over Target (+${durationDelta}s)`;
       pacingClass = 'pacing-over';
     } else {
-      pacingStatus = 'under';
       pacingLabel = `▼ Under Target (${durationDelta}s)`;
       pacingClass = 'pacing-under';
     }
@@ -50,10 +93,10 @@ export function renderVideoStoryboardBuilder(state) {
 
   return `
     <div class="video-storyboard-view container">
-      <!-- Campaign Context Card (Reused from session) -->
+      <!-- Campaign Context Reference Card -->
       ${renderCampaignContextCard(campaignData, isContextCollapsed)}
 
-      <!-- Storyboard Setup Panel -->
+      <!-- Storyboard Global Setup & Arc Controller -->
       <section class="storyboard-setup-card">
         <div class="setup-header">
           <div class="setup-title-group">
@@ -61,14 +104,14 @@ export function renderVideoStoryboardBuilder(state) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
             </div>
             <div>
-              <h3 class="setup-title">Pitch Video Storyboard Setup</h3>
-              <p class="setup-desc">Configure your 1–2 minute video narrative arc before generating Qwen scene prompts</p>
+              <h3 class="setup-title">Pitch Video Storyboard Director</h3>
+              <p class="setup-desc">Structure your 1–2 minute video narrative arc and generate granular, director-controlled scene prompts</p>
             </div>
           </div>
 
           <button class="btn btn-primary" id="btn-generate-full-storyboard">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <span>${hasScenes ? 'Regenerate Storyboard' : 'Generate Video Storyboard'}</span>
+            <span>${hasScenes ? 'Regenerate Entire Storyboard' : 'Generate Video Storyboard'}</span>
           </button>
         </div>
 
@@ -98,11 +141,11 @@ export function renderVideoStoryboardBuilder(state) {
                 aria-label="Target Video Length in seconds"
               />
               <div class="slider-ticks">
-                <span>60s (1 min)</span>
+                <span>60s (1m)</span>
                 <span>75s</span>
                 <span>90s (Standard)</span>
                 <span>105s</span>
-                <span>120s (2 min)</span>
+                <span>120s (2m)</span>
               </div>
             </div>
           </div>
@@ -125,25 +168,69 @@ export function renderVideoStoryboardBuilder(state) {
                 min="4" 
                 max="16" 
                 value="${sceneCount}" 
-                class="form-input stepper-input"
+                class="form-input stepper-input font-mono"
                 aria-label="Number of scenes in storyboard"
               />
               <button type="button" class="btn-stepper" id="btn-scene-count-inc" aria-label="Increase scene count">+</button>
             </div>
             <p class="setup-helper-text">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-              <span>Calculated at ~8–12 seconds per scene for tight documentary pitch pacing. Adjust as desired.</span>
+              <span>Auto-paced at ~8–12 seconds per clip for high-impact pitch delivery.</span>
             </p>
           </div>
 
-          <!-- 3. Narrative Arc Selector -->
+          <!-- 3. Target Video AI Model & Aspect Ratio -->
           <div class="setup-item-block setup-full-col">
             <div class="setup-label-row">
               <label class="setup-label">
                 <span class="setup-num">3</span>
+                <span>Target Video Generator & Aspect Ratio</span>
+              </label>
+              <span class="setup-hint">Optimizes prompt phrasing for specific generative video models</span>
+            </div>
+
+            <div class="video-model-ratio-row">
+              <div class="model-pills-group" id="video-model-selector">
+                ${VIDEO_MODEL_OPTIONS.map(m => {
+                  const isSelected = targetModel === m.id;
+                  return `
+                    <button 
+                      type="button" 
+                      class="model-pill-btn ${isSelected ? 'is-active' : ''}" 
+                      data-model-id="${m.id}"
+                    >
+                      <span class="model-name">${m.label}</span>
+                      <span class="model-badge">${m.badge}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+
+              <div class="ratio-segmented-group" id="video-ratio-segmented">
+                ${[
+                  { id: '16:9', label: '16:9 Landscape (Pitch Deck)' },
+                  { id: '9:16', label: '9:16 Vertical (Reel/Mobile)' },
+                  { id: '4:3', label: '4:3 Classic Documentary' }
+                ].map(r => `
+                  <button 
+                    type="button" 
+                    class="segmented-btn ${aspectRatio === r.id ? 'is-active' : ''}" 
+                    data-ratio="${r.id}"
+                  >
+                    ${r.label}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Narrative Arc Selector -->
+          <div class="setup-item-block setup-full-col">
+            <div class="setup-label-row">
+              <label class="setup-label">
+                <span class="setup-num">4</span>
                 <span>Narrative Arc & Story Structure</span>
               </label>
-              <span class="setup-hint">Shapes the dramatic role and sequence of each clip</span>
+              <span class="setup-hint">Governs the dramatic progression and camera motivation of each beat</span>
             </div>
 
             <div class="arc-chips-grid" id="arc-chips-container">
@@ -168,12 +255,12 @@ export function renderVideoStoryboardBuilder(state) {
             </div>
           </div>
 
-          <!-- 4. Themes Multi-Select -->
+          <!-- 5. Themes Multi-Select -->
           <div class="setup-item-block setup-full-col">
             <div class="setup-label-row">
               <label class="setup-label">
-                <span class="setup-num">4</span>
-                <span>Draw Scenes from Themes / Strands</span>
+                <span class="setup-num">5</span>
+                <span>Draw Scenes from Curatorial Strands</span>
               </label>
               <div class="theme-select-actions">
                 <button type="button" class="btn-text-action" id="btn-select-all-themes">Select All</button>
@@ -233,12 +320,12 @@ export function renderVideoStoryboardBuilder(state) {
 
             <button class="btn btn-sm btn-outline" id="btn-copy-full-storyboard" title="Copy entire shot list to clipboard">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <span>Copy Full Storyboard</span>
+              <span>Copy All Prompts</span>
             </button>
 
             <button class="btn btn-sm btn-primary" id="btn-save-storyboard-to-deck" title="Save this entire storyboard to Pitch Deck Drawer">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <span>Save to Pitch Deck</span>
+              <span>Save Full Storyboard to Deck</span>
             </button>
           </div>
         </div>
@@ -251,11 +338,11 @@ export function renderVideoStoryboardBuilder(state) {
             <div class="empty-icon-film">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
             </div>
-            <h3>Ready to Generate Your Pitch Storyboard</h3>
-            <p>Click <strong>"Generate Video Storyboard"</strong> above to break your campaign narrative into a sequence of ${sceneCount} Qwen-optimized documentary scenes.</p>
+            <h3>Configure Your Pitch Video Storyboard</h3>
+            <p>Click below to generate a sequence of <strong>${sceneCount} documentary clips</strong> with camera motion, optical lenses, lighting, pacing, and sound cues derived directly from your brochure.</p>
             <button class="btn btn-primary btn-lg" id="btn-generate-storyboard-cta">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              <span>Generate ${sceneCount}-Scene Storyboard</span>
+              <span>Generate ${sceneCount}-Scene Video Storyboard</span>
             </button>
           </div>
         ` : `
@@ -263,7 +350,7 @@ export function renderVideoStoryboardBuilder(state) {
             <div class="timeline-spine" aria-hidden="true"></div>
 
             <div class="storyboard-cards-list">
-              ${scenes.map((scene, idx) => renderSceneCard(scene, idx, scenes.length)).join('')}
+              ${scenes.map((scene, idx) => renderGranularSceneCard(scene, idx, scenes.length, themes, settings)).join('')}
             </div>
 
             <div class="timeline-add-scene-footer">
@@ -280,39 +367,47 @@ export function renderVideoStoryboardBuilder(state) {
 }
 
 /**
- * Renders individual Storyboard Scene Card with full inline editing and controls
+ * Renders a rich scene card with GRANULAR CONTROLS (matching image prompts power)
  */
-function renderSceneCard(scene, index, totalScenes) {
+function renderGranularSceneCard(scene, index, totalScenes, themes, settings) {
   const isFirst = index === 0;
   const isLast = index === totalScenes - 1;
+  const sceneNum = index + 1;
+
+  const currentTheme = scene.theme || (themes[0]?.label || "General");
+  const currentMotion = scene.motionStyle || "slow-push-in";
+  const currentLens = scene.lensStyle || "35mm-prime";
+  const currentLight = scene.lighting || "Natural daylight";
+  const currentPacing = scene.pacing || "realtime";
+  const currentAtmos = scene.atmospheres || ["film-grain"];
 
   return `
     <article class="storyboard-scene-card" data-scene-id="${scene.id}" data-scene-index="${index}">
       <!-- Timeline Node Marker -->
-      <div class="timeline-node-marker font-mono" aria-label="Scene ${scene.sceneNumber}">
-        <span>${scene.sceneNumber}</span>
+      <div class="timeline-node-marker font-mono" aria-label="Scene ${sceneNum}">
+        <span>${sceneNum}</span>
       </div>
 
       <div class="scene-card-inner">
         <!-- Scene Card Header -->
         <header class="scene-card-header">
           <div class="scene-title-row">
-            <div class="scene-number-pill">Scene ${scene.sceneNumber}</div>
+            <div class="scene-number-pill">Clip #${sceneNum}</div>
             <input 
               type="text" 
               class="scene-role-input form-input-clean" 
               data-scene-field="role" 
               data-scene-id="${scene.id}"
-              value="${escapeAttr(scene.role || `Scene ${scene.sceneNumber}`)}"
-              placeholder="e.g. Establishing the Ground Reality"
-              aria-label="Scene ${scene.sceneNumber} role in the narrative arc"
+              value="${escapeAttr(scene.role || `Scene ${sceneNum}`)}"
+              placeholder="e.g. Establishing the Frontline Reality"
+              aria-label="Scene ${sceneNum} role in pitch arc"
             />
           </div>
 
           <div class="scene-header-controls">
-            <!-- Duration Stepper / Input -->
+            <!-- Duration Stepper -->
             <div class="scene-duration-control" title="Scene duration in seconds">
-              <label for="dur-${scene.id}" class="visually-hidden">Scene ${scene.sceneNumber} Duration</label>
+              <label for="dur-${scene.id}" class="visually-hidden">Clip ${sceneNum} Duration</label>
               <input 
                 type="number" 
                 id="dur-${scene.id}"
@@ -332,10 +427,8 @@ function renderSceneCard(scene, index, totalScenes) {
                 type="button" 
                 class="btn-icon-control btn-move-scene-up" 
                 data-scene-id="${scene.id}" 
-                data-direction="up"
                 ${isFirst ? 'disabled' : ''} 
-                title="Move scene up"
-                aria-label="Move scene ${scene.sceneNumber} up"
+                title="Move scene earlier"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
               </button>
@@ -344,14 +437,22 @@ function renderSceneCard(scene, index, totalScenes) {
                 type="button" 
                 class="btn-icon-control btn-move-scene-down" 
                 data-scene-id="${scene.id}" 
-                data-direction="down"
                 ${isLast ? 'disabled' : ''} 
-                title="Move scene down"
-                aria-label="Move scene ${scene.sceneNumber} down"
+                title="Move scene later"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
             </div>
+
+            <!-- Duplicate Scene -->
+            <button 
+              type="button" 
+              class="btn-icon-control btn-duplicate-scene" 
+              data-scene-id="${scene.id}" 
+              title="Duplicate this scene"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
 
             <!-- Delete Scene -->
             <button 
@@ -359,95 +460,267 @@ function renderSceneCard(scene, index, totalScenes) {
               class="btn-icon-control btn-delete-scene" 
               data-scene-id="${scene.id}" 
               title="Delete scene"
-              aria-label="Delete scene ${scene.sceneNumber}"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
           </div>
         </header>
 
-        <!-- Scene Visual Prompt (Qwen Ready) -->
-        <div class="scene-prompt-section">
-          <div class="prompt-section-header">
-            <div class="prompt-format-tag">
-              <span class="qwen-pill">Qwen Video Prompt</span>
-              <span class="theme-tag-pill">${scene.theme || 'Strand'}</span>
-            </div>
-            <span class="prompt-guide-hint">Describes camera motion, subjects, setting & documentary realism</span>
-          </div>
-
-          <textarea 
-            class="form-textarea scene-prompt-textarea" 
-            data-scene-field="visualPrompt"
-            data-scene-id="${scene.id}"
-            rows="4"
-            aria-label="Visual prompt for scene ${scene.sceneNumber}"
-          >${scene.visualPrompt || ''}</textarea>
-        </div>
-
-        <!-- Camera Behavior & Transition Selectors -->
-        <div class="scene-technical-grid">
-          <!-- Camera Movement Selector -->
-          <div class="tech-select-item">
-            <label class="tech-field-label">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              <span>Camera Motion</span>
-            </label>
-            <select class="form-select form-select-sm scene-motion-select" data-scene-field="motionStyle" data-scene-id="${scene.id}">
-              ${CAMERA_MOTION_PATTERNS.map(m => `
-                <option value="${m.id}" ${scene.motionStyle === m.id ? 'selected' : ''}>
-                  ${m.label}
-                </option>
-              `).join('')}
-            </select>
-          </div>
-
-          <!-- Transition Selector -->
-          <div class="tech-select-item">
-            <label class="tech-field-label">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-              <span>Transition into Next Scene</span>
-            </label>
-            ${isLast ? `
-              <div class="transition-last-badge">
-                <span>End of Video (Fade to Black)</span>
-              </div>
-            ` : `
-              <select class="form-select form-select-sm scene-transition-select" data-scene-field="transition" data-scene-id="${scene.id}">
-                ${TRANSITION_OPTIONS.map(t => `
-                  <option value="${t.id}" ${scene.transition === t.id ? 'selected' : ''}>
+        <!-- GRANULAR CONTROL SECTION: The Director Controls (Per Scene!) -->
+        <div class="scene-director-panel">
+          <!-- Row 1: Theme & Location -->
+          <div class="director-row-2col">
+            <!-- Theme Strand -->
+            <div class="director-field-item">
+              <label class="director-label">
+                <span class="director-tag">Strand</span>
+                <span>Curatorial Theme</span>
+              </label>
+              <select class="form-select form-select-sm scene-theme-select" data-scene-field="theme" data-scene-id="${scene.id}">
+                ${themes.map(t => `
+                  <option value="${escapeAttr(t.label)}" ${currentTheme === t.label ? 'selected' : ''}>
                     ${t.label}
                   </option>
                 `).join('')}
               </select>
-            `}
+            </div>
+
+            <!-- Setting / Location -->
+            <div class="director-field-item">
+              <label class="director-label">
+                <span class="director-tag">Setting</span>
+                <span>On-The-Ground Location</span>
+              </label>
+              <select class="form-select form-select-sm scene-setting-select" data-scene-field="setting" data-scene-id="${scene.id}">
+                ${settings.map(s => `
+                  <option value="${escapeAttr(s)}" ${scene.setting === s ? 'selected' : ''}>
+                    ${s}
+                  </option>
+                `).join('')}
+                <option value="__custom__" ${scene.isCustomSetting ? 'selected' : ''}>✏️ Custom Location...</option>
+              </select>
+              ${scene.isCustomSetting ? `
+                <input 
+                  type="text" 
+                  class="form-input form-input-sm scene-custom-setting-input mt-1" 
+                  data-scene-field="customSetting" 
+                  data-scene-id="${scene.id}" 
+                  placeholder="Enter specific setting..." 
+                  value="${escapeAttr(scene.customSetting || '')}"
+                />
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Row 2: Subject & Human Agency -->
+          <div class="director-field-item">
+            <div class="director-label-with-action">
+              <label class="director-label">
+                <span class="director-tag">Subject</span>
+                <span>Human Agency & Physical Action</span>
+              </label>
+              <button type="button" class="btn-text-action btn-insert-subject-action" data-scene-id="${scene.id}">
+                Suggest Action
+              </button>
+            </div>
+            <textarea 
+              class="form-textarea scene-subject-textarea" 
+              data-scene-field="subject" 
+              data-scene-id="${scene.id}" 
+              rows="2" 
+              placeholder="e.g. Village youth holding smartphones steady while documenting oral histories..."
+            >${scene.subject || ''}</textarea>
+          </div>
+
+          <!-- Row 3: Camera Motion Chips -->
+          <div class="director-field-item">
+            <label class="director-label">
+              <span class="director-tag">Motion</span>
+              <span>Camera Movement & Dynamic</span>
+            </label>
+            <div class="chips-group scene-motion-chips" data-scene-id="${scene.id}">
+              ${CAMERA_MOTION_PATTERNS.map(m => {
+                const isSelected = currentMotion === m.id;
+                return `
+                  <button 
+                    type="button" 
+                    class="chip chip-sm ${isSelected ? 'chip-selected' : ''}" 
+                    data-scene-chip-field="motionStyle" 
+                    data-scene-id="${scene.id}" 
+                    data-chip-value="${m.id}"
+                    title="${m.phrase}"
+                  >
+                    ${isSelected ? '● ' : ''}${m.label}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Row 4: Lens Optics & Lighting Chips -->
+          <div class="director-row-2col">
+            <!-- Lens & Framing -->
+            <div class="director-field-item">
+              <label class="director-label">
+                <span class="director-tag">Lens</span>
+                <span>Optical Lens Profile</span>
+              </label>
+              <div class="chips-group scene-lens-chips" data-scene-id="${scene.id}">
+                ${CAMERA_LENS_OPTIONS.map(l => {
+                  const isSelected = currentLens === l.id;
+                  return `
+                    <button 
+                      type="button" 
+                      class="chip chip-sm ${isSelected ? 'chip-selected' : ''}" 
+                      data-scene-chip-field="lensStyle" 
+                      data-scene-id="${scene.id}" 
+                      data-chip-value="${l.id}"
+                      title="${l.desc}"
+                    >
+                      ${isSelected ? '✓ ' : ''}${l.label}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Lighting -->
+            <div class="director-field-item">
+              <label class="director-label">
+                <span class="director-tag">Light</span>
+                <span>Lighting & Atmospheric Time</span>
+              </label>
+              <div class="chips-group scene-lighting-chips" data-scene-id="${scene.id}">
+                ${LIGHTING_CONDITIONS.map(lt => {
+                  const isSelected = currentLight === lt.label;
+                  return `
+                    <button 
+                      type="button" 
+                      class="chip chip-sm ${isSelected ? 'chip-selected' : ''}" 
+                      data-scene-chip-field="lighting" 
+                      data-scene-id="${scene.id}" 
+                      data-chip-value="${lt.label}"
+                      title="${lt.desc}"
+                    >
+                      ${isSelected ? '● ' : ''}${lt.label}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 5: Pacing & Atmosphere Realism -->
+          <div class="director-row-2col">
+            <!-- Pacing -->
+            <div class="director-field-item">
+              <label class="director-label">
+                <span class="director-tag">Speed</span>
+                <span>Cadence & Frame Rate</span>
+              </label>
+              <div class="chips-group scene-pacing-chips" data-scene-id="${scene.id}">
+                ${PACING_OPTIONS.map(p => {
+                  const isSelected = currentPacing === p.id;
+                  return `
+                    <button 
+                      type="button" 
+                      class="chip chip-sm ${isSelected ? 'chip-selected' : ''}" 
+                      data-scene-chip-field="pacing" 
+                      data-scene-id="${scene.id}" 
+                      data-chip-value="${p.id}"
+                    >
+                      ${p.label}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Transition -->
+            <div class="director-field-item">
+              <label class="director-label">
+                <span class="director-tag">Cut</span>
+                <span>Transition to Next Clip</span>
+              </label>
+              ${isLast ? `
+                <div class="transition-last-badge">
+                  <span>Fade through Black (End of Video)</span>
+                </div>
+              ` : `
+                <select class="form-select form-select-sm scene-transition-select" data-scene-field="transition" data-scene-id="${scene.id}">
+                  ${TRANSITION_OPTIONS.map(t => `
+                    <option value="${t.id}" ${scene.transition === t.id ? 'selected' : ''}>
+                      ${t.label} (${t.desc})
+                    </option>
+                  `).join('')}
+                </select>
+              `}
+            </div>
           </div>
         </div>
 
-        <!-- On-Screen Text / Voiceover Suggestion -->
-        <div class="scene-voiceover-section">
-          <div class="voiceover-header">
-            <label class="voiceover-label">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-              <span>Voiceover / On-Screen Text Suggestion (Optional)</span>
-            </label>
-            <span class="voiceover-hint">Suggested narration matching campaign tone</span>
+        <!-- LIVE ASSEMBLED VIDEO PROMPT (Reactive in real time!) -->
+        <div class="scene-prompt-section">
+          <div class="prompt-section-header">
+            <div class="prompt-format-tag">
+              <span class="live-pill"><span class="pulse-dot"></span> Live Video Prompt</span>
+              <span class="qwen-pill">${(scene.targetModel || 'Qwen').toUpperCase()}</span>
+              <span class="theme-tag-pill">${currentTheme}</span>
+            </div>
+            <button class="btn btn-sm btn-ghost btn-copy-scene-prompt" data-scene-id="${scene.id}" title="Copy prompt">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>Copy</span>
+            </button>
           </div>
 
           <textarea 
-            class="form-textarea voiceover-textarea" 
-            data-scene-field="voiceover"
+            class="form-textarea scene-prompt-textarea live-video-prompt-display" 
+            data-scene-field="visualPrompt"
             data-scene-id="${scene.id}"
-            rows="2"
-            placeholder="e.g. 'Real change is cultivated by the hands that know the land best.'"
-            aria-label="Voiceover suggestion for scene ${scene.sceneNumber}"
-          >${scene.voiceover || ''}</textarea>
+            rows="3"
+            aria-label="Visual prompt for scene ${sceneNum}"
+          >${scene.visualPrompt || ''}</textarea>
         </div>
 
-        <!-- Scene Action Footer Bar -->
+        <!-- Voiceover & Sound Design (Foley) -->
+        <div class="scene-audio-narrative-row">
+          <!-- Voiceover -->
+          <div class="audio-col">
+            <label class="director-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+              <span>Voiceover / Narration Line</span>
+            </label>
+            <input 
+              type="text" 
+              class="form-input form-input-sm scene-voiceover-input" 
+              data-scene-field="voiceover"
+              data-scene-id="${scene.id}"
+              placeholder="e.g. 'Real change is cultivated by the hands that know the land best.'"
+              value="${escapeAttr(scene.voiceover || '')}"
+            />
+          </div>
+
+          <!-- Sound Design / Foley -->
+          <div class="audio-col">
+            <label class="director-label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              <span>Sound Design / Foley Ambiance</span>
+            </label>
+            <input 
+              type="text" 
+              class="form-input form-input-sm scene-audio-input" 
+              data-scene-field="audioCue"
+              data-scene-id="${scene.id}"
+              placeholder="e.g. Desert wind rustling, footsteps on dry earth, quiet laughter..."
+              value="${escapeAttr(scene.audioCue || '')}"
+            />
+          </div>
+        </div>
+
+        <!-- Scene Footer Actions -->
         <footer class="scene-card-footer">
           <div class="scene-footer-meta">
-            <span class="scene-meta-indicator">Clip #${scene.sceneNumber} • ${scene.duration}s</span>
+            <span class="scene-meta-indicator font-mono">Clip #${sceneNum} • ${scene.duration}s • ${scene.motionStyle}</span>
           </div>
 
           <div class="scene-footer-actions">
@@ -455,11 +728,11 @@ function renderSceneCard(scene, index, totalScenes) {
             <button 
               type="button" 
               class="btn btn-sm btn-ghost btn-regen-single-scene" 
-              data-scene-id="${scene.id}"
-              title="Regenerate this scene prompt while preserving its role"
+              data-scene-id="${scene.id}" 
+              title="Re-compose this scene prompt from its parameters"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-              <span>Regenerate Scene</span>
+              <span>Re-compose</span>
             </button>
 
             <!-- Save Single Scene to Deck -->
@@ -470,18 +743,7 @@ function renderSceneCard(scene, index, totalScenes) {
               title="Save this scene clip prompt to pitch deck drawer"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <span>Save Scene</span>
-            </button>
-
-            <!-- Copy Scene Prompt -->
-            <button 
-              type="button" 
-              class="btn btn-sm btn-secondary btn-copy-scene-prompt" 
-              data-scene-id="${scene.id}"
-              title="Copy Qwen visual prompt for this scene"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <span>Copy Prompt</span>
+              <span>Save Clip to Deck</span>
             </button>
           </div>
         </footer>
@@ -491,40 +753,69 @@ function renderSceneCard(scene, index, totalScenes) {
 }
 
 /**
- * Empty Guidance state shown when no brochure is yet uploaded in the session
+ * Integrated Upload & Sample Hub directly in Video Storyboard (NO REDIRECT!)
  */
-function renderStoryboardEmptyState() {
+function renderStoryboardUploadHub(parseError) {
   return `
     <div class="video-storyboard-view container">
-      <div class="storyboard-no-brochure-card">
-        <div class="empty-icon-film">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-        </div>
-
-        <h2 class="empty-state-title">Upload a Brochure to Build Your Pitch Video Storyboard</h2>
-        <p class="empty-state-subtitle">
-          The Video Storyboard Builder automatically sequences 60–120s pitch videos based on your campaign's extracted themes, settings, and documentary narrative.
+      <div class="editorial-hero">
+        <div class="hero-eyebrow">Pitch Video Director</div>
+        <h1 class="hero-title">Compose Documentary Video Storyboards from Any Brochure</h1>
+        <p class="hero-description">
+          Upload any campaign brochure, field report, or pitch brief to automatically generate a complete 60–120s documentary video sequence for <strong>Qwen Video</strong>, <strong>Kling AI</strong>, and <strong>Runway Gen-3</strong> with full camera, lens, and pacing control.
         </p>
+      </div>
 
-        <div class="empty-state-actions-row">
-          <button class="btn btn-primary btn-lg" id="btn-goto-upload-step">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <span>Upload Campaign Brochure</span>
-          </button>
+      <div class="upload-box-wrapper">
+        <div class="upload-dropzone" id="video-upload-dropzone" tabindex="0" role="button" aria-label="Drop campaign brochure to generate video storyboard">
+          <input type="file" id="video-brochure-file-input" class="visually-hidden" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" />
           
-          <span class="or-divider">or try a sample brief:</span>
+          <div class="dropzone-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          </div>
+
+          <div class="dropzone-content">
+            <h3 class="dropzone-heading">Drop your campaign brochure here to build a Video Storyboard, or <span class="dropzone-link">browse files</span></h3>
+            <p class="dropzone-sub">Extracts frontline narrative beats, settings, and authentic action for video sequence generation.</p>
+          </div>
+
+          <div class="dropzone-pills">
+            <span class="filetype-pill">PDF</span>
+            <span class="filetype-pill">DOCX</span>
+            <span class="filetype-pill">TXT / MD</span>
+          </div>
         </div>
 
-        <div class="quick-samples-bar">
-          <button class="btn-sample-pill" data-sample-quick="frontier-solar">
-            ⚡ Frontier Solar Outreach
-          </button>
-          <button class="btn-sample-pill" data-sample-quick="ocean-mangrove">
-            🌊 Coastal Wetland Defense
-          </button>
-          <button class="btn-sample-pill" data-sample-quick="mobile-literacy">
-            📚 Rural Mobile Literacy
-          </button>
+        ${parseError ? `
+          <div class="parse-error-banner" role="alert">
+            <div class="error-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="error-msg-wrap">
+              <strong>Parsing Notice:</strong> ${parseError}
+            </div>
+            <button class="btn btn-sm btn-outline" id="btn-open-manual-entry">Fill manually instead</button>
+          </div>
+        ` : ''}
+
+        <div class="sample-brochures-wrap">
+          <div class="sample-header">
+            <span class="sample-label">Or explore video storyboards with a sample brochure:</span>
+            <button class="btn-text-link" id="btn-open-manual-entry-direct">Or start with a blank brief</button>
+          </div>
+          <div class="sample-grid">
+            ${SAMPLE_BROCHURES.map(sample => `
+              <button class="sample-card sample-card-video-trigger" data-sample-id="${sample.id}" type="button">
+                <div class="sample-card-tag">${sample.tag} • Video Arc</div>
+                <div class="sample-card-title">${sample.title}</div>
+                <div class="sample-card-desc">${sample.subtitle}</div>
+                <div class="sample-card-action">
+                  <span>Build Video Storyboard</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </div>
+              </button>
+            `).join('')}
+          </div>
         </div>
       </div>
     </div>

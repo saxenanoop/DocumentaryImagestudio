@@ -83,7 +83,7 @@ const state = {
 /**
  * Initializes builder & storyboard states when a new campaign is parsed
  */
-function initBuilderFromCampaign(data) {
+function initBuilderFromCampaign(data, targetMode = null) {
   const themes = data.themes || [];
   const settings = data.settings || [];
   const toneKeywords = data.tone_keywords || [];
@@ -93,6 +93,10 @@ function initBuilderFromCampaign(data) {
   state.isParsing = false;
   state.parseError = null;
   state.isContextCollapsed = false;
+
+  if (targetMode) {
+    state.activeMode = targetMode;
+  }
 
   state.builderState = {
     selectedThemeIndex: 0,
@@ -114,9 +118,18 @@ function initBuilderFromCampaign(data) {
     sceneCount: 9,
     narrativeArc: 'problem-solution-impact',
     selectedThemes: themes.map(t => t.label),
+    targetModel: 'qwen',
+    aspectRatio: '16:9',
     scenes: [],
     isGenerated: false
   };
+
+  // If active mode is video-storyboard, generate scenes immediately so user sees full controls
+  if (state.activeMode === 'video-storyboard') {
+    const gen = generateVideoStoryboard(data, state.storyboardState);
+    state.storyboardState.scenes = gen.scenes;
+    state.storyboardState.isGenerated = true;
+  }
 }
 
 /**
@@ -174,9 +187,13 @@ function attachEventListeners() {
   const tabModeVideo = document.getElementById('tab-mode-video');
 
   if (tabModeImage) {
-    tabModeImage.addEventListener('click', () => {
+    tabModeImage.addEventListener('click', (e) => {
+      e.preventDefault();
       if (state.activeMode !== 'image-prompts') {
         state.activeMode = 'image-prompts';
+        if (window.location.hash !== '#image-prompts') {
+          history.replaceState(null, '', '#image-prompts');
+        }
         renderApp();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -184,9 +201,19 @@ function attachEventListeners() {
   }
 
   if (tabModeVideo) {
-    tabModeVideo.addEventListener('click', () => {
+    tabModeVideo.addEventListener('click', (e) => {
+      e.preventDefault();
       if (state.activeMode !== 'video-storyboard') {
         state.activeMode = 'video-storyboard';
+        if (window.location.hash !== '#video-storyboard') {
+          history.replaceState(null, '', '#video-storyboard');
+        }
+        // Auto-generate scenes if campaign data is loaded but scenes not yet built
+        if (state.campaignData && (!state.storyboardState.scenes || state.storyboardState.scenes.length === 0)) {
+          const gen = generateVideoStoryboard(state.campaignData, state.storyboardState);
+          state.storyboardState.scenes = gen.scenes;
+          state.storyboardState.isGenerated = true;
+        }
         renderApp();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -232,7 +259,7 @@ function attachEventListeners() {
   const handleUploadNew = () => {
     state.campaignData = null;
     state.parseError = null;
-    state.activeMode = 'image-prompts';
+    // Preserve current activeMode so user stays in video storyboard if they were there!
     renderApp();
     showToast('Ready for new brochure upload. Saved deck items preserved!', 'info');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -240,7 +267,7 @@ function attachEventListeners() {
   if (btnHeaderUploadNew) btnHeaderUploadNew.addEventListener('click', handleUploadNew);
   if (btnUploadDifferent) btnUploadDifferent.addEventListener('click', handleUploadNew);
 
-  // 3. Dropzone & File Input Handling
+  // 3. Dropzone & File Input Handling (Main Upload Zone)
   const dropzone = document.getElementById('upload-dropzone');
   const fileInput = document.getElementById('brochure-file-input');
 
@@ -260,38 +287,71 @@ function attachEventListeners() {
       e.preventDefault();
       dropzone.classList.remove('is-dragover');
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleFileProcessing(e.dataTransfer.files[0]);
+        handleFileProcessing(e.dataTransfer.files[0], 'image-prompts');
       }
     });
 
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files[0]) {
-        handleFileProcessing(e.target.files[0]);
+        handleFileProcessing(e.target.files[0], 'image-prompts');
+      }
+    });
+  }
+
+  // 3b. Video Storyboard Embedded Upload Dropzone & File Input (NO REDIRECT!)
+  const videoDropzone = document.getElementById('video-upload-dropzone');
+  const videoFileInput = document.getElementById('video-brochure-file-input');
+
+  if (videoDropzone && videoFileInput) {
+    videoDropzone.addEventListener('click', () => videoFileInput.click());
+
+    videoDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      videoDropzone.classList.add('is-dragover');
+    });
+
+    videoDropzone.addEventListener('dragleave', () => {
+      videoDropzone.classList.remove('is-dragover');
+    });
+
+    videoDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      videoDropzone.classList.remove('is-dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleFileProcessing(e.dataTransfer.files[0], 'video-storyboard');
+      }
+    });
+
+    videoFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleFileProcessing(e.target.files[0], 'video-storyboard');
       }
     });
   }
 
   // 4. Sample Brochure Triggers
-  document.querySelectorAll('.sample-card').forEach(card => {
+  document.querySelectorAll('.sample-card:not(.sample-card-video-trigger)').forEach(card => {
     card.addEventListener('click', () => {
       const sampleId = card.getAttribute('data-sample-id');
       const sample = SAMPLE_BROCHURES.find(s => s.id === sampleId);
       if (sample) {
-        handleSampleProcessing(sample);
+        handleSampleProcessing(sample, 'image-prompts');
       }
     });
   });
 
-  // Storyboard Empty State Quick Triggers
-  const btnGotoUploadStep = document.getElementById('btn-goto-upload-step');
-  if (btnGotoUploadStep) {
-    btnGotoUploadStep.addEventListener('click', () => {
-      state.activeMode = 'image-prompts';
-      renderApp();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.querySelectorAll('.sample-card-video-trigger').forEach(card => {
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sampleId = card.getAttribute('data-sample-id');
+      const sample = SAMPLE_BROCHURES.find(s => s.id === sampleId);
+      if (sample) {
+        handleSampleProcessing(sample, 'video-storyboard');
+      }
     });
-  }
+  });
 
+  // Storyboard Empty State Quick Triggers (Pills)
   document.querySelectorAll('.btn-sample-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       const sampleKey = btn.getAttribute('data-sample-quick');
@@ -682,7 +742,35 @@ function attachEventListeners() {
       });
     }
 
-    // 5. Generate Full Storyboard Actions
+    // 5. Target Video AI Model Selector Pills
+    document.querySelectorAll('#video-model-selector .model-pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const modelId = btn.getAttribute('data-model-id');
+        state.storyboardState.targetModel = modelId;
+        (state.storyboardState.scenes || []).forEach(scene => {
+          scene.targetModel = modelId;
+          scene.visualPrompt = regenerateSingleScenePrompt(scene, state.campaignData);
+        });
+        renderApp();
+        showToast(`Optimized prompt syntax for ${modelId.toUpperCase()}`, 'info');
+      });
+    });
+
+    // 6. Video Aspect Ratio Switcher
+    document.querySelectorAll('#video-ratio-segmented .segmented-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ratio = btn.getAttribute('data-ratio');
+        state.storyboardState.aspectRatio = ratio;
+        (state.storyboardState.scenes || []).forEach(scene => {
+          scene.aspectRatio = ratio;
+          scene.visualPrompt = regenerateSingleScenePrompt(scene, state.campaignData);
+        });
+        renderApp();
+        showToast(`Set video aspect ratio to ${ratio}`, 'info');
+      });
+    });
+
+    // 7. Generate Full Storyboard Actions
     const handleGenerateStoryboard = () => {
       const result = generateVideoStoryboard(state.campaignData, state.storyboardState);
       state.storyboardState.scenes = result.scenes;
@@ -702,33 +790,236 @@ function attachEventListeners() {
     if (btnGenerateFull) btnGenerateFull.addEventListener('click', handleGenerateStoryboard);
     if (btnGenerateCta) btnGenerateCta.addEventListener('click', handleGenerateStoryboard);
 
-    // 6. Scene Field Live Editing
-    document.querySelectorAll('.storyboard-scene-card input, .storyboard-scene-card textarea, .storyboard-scene-card select').forEach(input => {
-      const field = input.getAttribute('data-scene-field');
-      const sceneId = input.getAttribute('data-scene-id');
-      if (!field || !sceneId) return;
-
-      const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
-      if (!scene) return;
-
-      if (field === 'duration') {
-        input.addEventListener('input', (e) => {
-          let val = parseInt(e.target.value, 10);
-          if (isNaN(val) || val < 1) val = 1;
-          scene.duration = val;
-          updateLivePacingDisplay();
-        });
-      } else {
-        input.addEventListener('input', (e) => {
-          scene[field] = e.target.value;
-        });
-        input.addEventListener('change', (e) => {
-          scene[field] = e.target.value;
-        });
-      }
+    // 8. Granular Per-Scene Director Controls (Matching Image Prompts section depth)
+    // - Curatorial Theme Dropdown per scene
+    document.querySelectorAll('.scene-theme-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const sceneId = sel.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.theme = e.target.value;
+          updateSceneLivePrompt(sceneId);
+        }
+      });
     });
 
-    // 7. Scene Reorder (Up / Down)
+    // - On-the-ground Setting / Location dropdown per scene
+    document.querySelectorAll('.scene-setting-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const sceneId = sel.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (!scene) return;
+
+        const card = sel.closest('.storyboard-scene-card');
+        if (e.target.value === '__custom__') {
+          scene.isCustomSetting = true;
+          scene.setting = scene.customSetting || 'Custom frontline location';
+          let customInput = card ? card.querySelector('.scene-custom-setting-input') : null;
+          if (!customInput && card) {
+            const parent = sel.parentElement;
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'form-input form-input-sm scene-custom-setting-input mt-1';
+            inp.placeholder = 'Enter specific setting...';
+            inp.value = scene.customSetting || '';
+            inp.setAttribute('data-scene-id', sceneId);
+            inp.addEventListener('input', (ev) => {
+              scene.customSetting = ev.target.value;
+              scene.setting = ev.target.value;
+              updateSceneLivePrompt(sceneId);
+            });
+            parent.appendChild(inp);
+            inp.focus();
+          } else if (customInput) {
+            customInput.style.display = 'block';
+            customInput.focus();
+          }
+        } else {
+          scene.isCustomSetting = false;
+          scene.setting = e.target.value;
+          const customInput = card ? card.querySelector('.scene-custom-setting-input') : null;
+          if (customInput) customInput.style.display = 'none';
+        }
+        updateSceneLivePrompt(sceneId);
+      });
+    });
+
+    // - Custom Setting input per scene
+    document.querySelectorAll('.scene-custom-setting-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sceneId = inp.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.customSetting = e.target.value;
+          scene.setting = e.target.value;
+          updateSceneLivePrompt(sceneId);
+        }
+      });
+    });
+
+    // - Subject Action input per scene
+    document.querySelectorAll('.scene-subject-textarea').forEach(ta => {
+      ta.addEventListener('input', (e) => {
+        const sceneId = ta.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.subject = e.target.value;
+          updateSceneLivePrompt(sceneId);
+        }
+      });
+    });
+
+    // - Suggest Action button per scene
+    document.querySelectorAll('.btn-insert-subject-action').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sceneId = btn.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (!scene || !state.campaignData) return;
+
+        const examples = state.campaignData.subject_examples || [];
+        const sampleActions = [
+          `Local community members actively collaborating on ${scene.theme}, maintaining steady focused movements`,
+          `Frontline practitioner demonstrating field equipment to attentive community members`,
+          `Elder and younger coordinator reviewing local outcomes with authentic dignity and mutual respect`,
+          `Community members exchanging tools and discussing next steps in natural conversational cadence`,
+          `Field team recording authentic oral accounts with attentive visual presence`
+        ];
+
+        const pool = examples.length > 0 ? [...examples, ...sampleActions] : sampleActions;
+        const randomAction = pool[Math.floor(Math.random() * pool.length)];
+
+        scene.subject = randomAction;
+        const card = document.querySelector(`.storyboard-scene-card[data-scene-id="${sceneId}"]`);
+        if (card) {
+          const textarea = card.querySelector('.scene-subject-textarea');
+          if (textarea) textarea.value = randomAction;
+        }
+        updateSceneLivePrompt(sceneId);
+        showToast('Inserted contextual human action', 'info');
+      });
+    });
+
+    // - Interactive Granular Chips per scene (motionStyle, lensStyle, lighting, pacing)
+    document.querySelectorAll('[data-scene-chip-field]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const field = chip.getAttribute('data-scene-chip-field');
+        const sceneId = chip.getAttribute('data-scene-id');
+        const chipValue = chip.getAttribute('data-chip-value');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (!scene) return;
+
+        scene[field] = chipValue;
+
+        const group = chip.closest('.chips-group');
+        if (group) {
+          group.querySelectorAll('.chip').forEach(c => {
+            const isCurrent = c.getAttribute('data-chip-value') === chipValue;
+            c.classList.toggle('chip-selected', isCurrent);
+            let cleanLabel = c.textContent.replace(/^[●✓]\s*/, '').trim();
+            if (field === 'lensStyle') {
+              c.textContent = isCurrent ? `✓ ${cleanLabel}` : cleanLabel;
+            } else if (field === 'lighting' || field === 'motionStyle') {
+              c.textContent = isCurrent ? `● ${cleanLabel}` : cleanLabel;
+            } else {
+              c.textContent = cleanLabel;
+            }
+          });
+        }
+
+        updateSceneLivePrompt(sceneId);
+      });
+    });
+
+    // - Transition select per scene
+    document.querySelectorAll('.scene-transition-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const sceneId = sel.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.transition = e.target.value;
+        }
+      });
+    });
+
+    // - Voiceover and Audio Cue inputs per scene
+    document.querySelectorAll('.scene-voiceover-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sceneId = inp.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.voiceover = e.target.value;
+        }
+      });
+    });
+
+    document.querySelectorAll('.scene-audio-input').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sceneId = inp.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.audioCue = e.target.value;
+          updateSceneLivePrompt(sceneId);
+        }
+      });
+    });
+
+    // - Direct editable Visual Prompt textarea per scene
+    document.querySelectorAll('.scene-prompt-textarea').forEach(ta => {
+      ta.addEventListener('input', (e) => {
+        const sceneId = ta.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.visualPrompt = e.target.value;
+        }
+      });
+    });
+
+    // - Scene Role & Duration Inputs
+    document.querySelectorAll('.storyboard-scene-card input[data-scene-field="role"]').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sceneId = inp.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.role = e.target.value;
+        }
+      });
+    });
+
+    document.querySelectorAll('.storyboard-scene-card input[data-scene-field="duration"]').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sceneId = inp.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (!scene) return;
+        let val = parseInt(e.target.value, 10);
+        if (isNaN(val) || val < 1) val = 1;
+        scene.duration = val;
+        updateLivePacingDisplay();
+        const card = inp.closest('.storyboard-scene-card');
+        const meta = card ? card.querySelector('.scene-meta-indicator') : null;
+        if (meta) meta.textContent = `Clip #${scene.sceneNumber} • ${scene.duration}s • ${scene.motionStyle}`;
+      });
+    });
+
+    // - Duplicate Scene Button
+    document.querySelectorAll('.btn-duplicate-scene').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sceneId = btn.getAttribute('data-scene-id');
+        const scenes = state.storyboardState.scenes;
+        const idx = scenes.findIndex(s => s.id === sceneId);
+        if (idx !== -1) {
+          const source = scenes[idx];
+          const copy = JSON.parse(JSON.stringify(source));
+          copy.id = `scene-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+          copy.role = `${source.role} (Continued)`;
+          scenes.splice(idx + 1, 0, copy);
+          reindexScenes(scenes);
+          renderApp();
+          showToast(`Duplicated Scene #${source.sceneNumber}`, 'success');
+        }
+      });
+    });
+
+    // - Reorder Scene (Up / Down)
     document.querySelectorAll('.btn-move-scene-up').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
@@ -761,7 +1052,7 @@ function attachEventListeners() {
       });
     });
 
-    // 8. Delete Scene
+    // - Delete Scene
     document.querySelectorAll('.btn-delete-scene').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
@@ -773,25 +1064,14 @@ function attachEventListeners() {
       });
     });
 
-    // 9. Regenerate Single Scene
+    // - Regenerate Single Scene Prompt
     document.querySelectorAll('.btn-regen-single-scene').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
-        const scenes = state.storyboardState.scenes;
-        const idx = scenes.findIndex(s => s.id === sceneId);
-        if (idx !== -1) {
-          const orig = scenes[idx];
-          const regenerated = regenerateSingleScenePrompt(
-            orig,
-            state.campaignData,
-            state.storyboardState.narrativeArc,
-            idx,
-            scenes.length,
-            state.storyboardState.selectedThemes
-          );
-          scenes[idx] = regenerated;
-          renderApp();
-          showToast(`Regenerated Scene #${orig.sceneNumber}`, 'success');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          updateSceneLivePrompt(sceneId);
+          showToast(`Re-composed Scene #${scene.sceneNumber} prompt`, 'success');
         }
       });
     });
@@ -1053,6 +1333,44 @@ function getLivePromptText() {
 }
 
 /**
+ * Real-time reactive update of a single video scene prompt and UI display
+ */
+function updateSceneLivePrompt(sceneId) {
+  const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+  if (!scene || !state.campaignData) return;
+
+  // Ensure scene has current global defaults if not explicitly set
+  if (!scene.targetModel) scene.targetModel = state.storyboardState.targetModel || 'qwen';
+  if (!scene.aspectRatio) scene.aspectRatio = state.storyboardState.aspectRatio || '16:9';
+
+  const newPrompt = regenerateSingleScenePrompt(scene, state.campaignData);
+  scene.visualPrompt = newPrompt;
+
+  const card = document.querySelector(`.storyboard-scene-card[data-scene-id="${sceneId}"]`);
+  if (card) {
+    const promptArea = card.querySelector('.scene-prompt-textarea');
+    if (promptArea && document.activeElement !== promptArea) {
+      promptArea.value = newPrompt;
+    }
+
+    const metaIndicator = card.querySelector('.scene-meta-indicator');
+    if (metaIndicator) {
+      metaIndicator.textContent = `Clip #${scene.sceneNumber} • ${scene.duration}s • ${scene.motionStyle}`;
+    }
+
+    const themePill = card.querySelector('.theme-tag-pill');
+    if (themePill && scene.theme) {
+      themePill.textContent = scene.theme;
+    }
+
+    const modelPill = card.querySelector('.qwen-pill');
+    if (modelPill) {
+      modelPill.textContent = (scene.targetModel || state.storyboardState.targetModel || 'Qwen').toUpperCase();
+    }
+  }
+}
+
+/**
  * Real-time reactive update of live prompt text without whole-page DOM tear down
  */
 function updateLivePromptPreview() {
@@ -1065,7 +1383,7 @@ function updateLivePromptPreview() {
 /**
  * Handles uploaded file reading, parsing, and LLM extraction
  */
-async function handleFileProcessing(file) {
+async function handleFileProcessing(file, targetMode = null) {
   state.isParsing = true;
   state.parseError = null;
   state.parseProgress = { stage: 'Reading document file...', percent: 15 };
@@ -1086,7 +1404,8 @@ async function handleFileProcessing(file) {
     renderApp();
 
     setTimeout(() => {
-      initBuilderFromCampaign(campaignData);
+      const mode = targetMode || state.activeMode;
+      initBuilderFromCampaign(campaignData, mode);
       renderApp();
       showToast(`Extracted: ${campaignData.campaign_name}`, 'success');
     }, 400);
@@ -1117,8 +1436,8 @@ async function handleSampleProcessing(sample, targetMode = null) {
       const campaignData = await extractCampaignData(sample.rawText);
 
       setTimeout(() => {
-        initBuilderFromCampaign(campaignData);
-        if (targetMode) state.activeMode = targetMode;
+        const mode = targetMode || state.activeMode;
+        initBuilderFromCampaign(campaignData, mode);
         renderApp();
         showToast(`Loaded ${sample.title}`, 'success');
       }, 350);
@@ -1141,7 +1460,7 @@ async function handleRawTextExtraction(text) {
 
   try {
     const campaignData = await extractCampaignData(text);
-    initBuilderFromCampaign(campaignData);
+    initBuilderFromCampaign(campaignData, state.activeMode);
     renderApp();
     showToast(`Extracted: ${campaignData.campaign_name}`, 'success');
   } catch (err) {
@@ -1209,7 +1528,30 @@ function downloadFile(content, fileName, mimeType) {
   }, 100);
 }
 
+function initRouteFromHash() {
+  const hash = (window.location.hash || '').toLowerCase();
+  if (hash === '#video-storyboard' || hash === '#video' || hash === '#storyboard') {
+    state.activeMode = 'video-storyboard';
+  } else if (hash === '#image-prompts' || hash === '#images' || hash === '#create') {
+    state.activeMode = 'image-prompts';
+  }
+}
+
+window.addEventListener('hashchange', () => {
+  const oldMode = state.activeMode;
+  initRouteFromHash();
+  if (oldMode !== state.activeMode) {
+    if (state.activeMode === 'video-storyboard' && state.campaignData && (!state.storyboardState.scenes || state.storyboardState.scenes.length === 0)) {
+      const gen = generateVideoStoryboard(state.campaignData, state.storyboardState);
+      state.storyboardState.scenes = gen.scenes;
+      state.storyboardState.isGenerated = true;
+    }
+    renderApp();
+  }
+});
+
 // Boot application
 document.addEventListener('DOMContentLoaded', () => {
+  initRouteFromHash();
   renderApp();
 });
