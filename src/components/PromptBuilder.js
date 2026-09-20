@@ -277,7 +277,7 @@ export function renderPromptBuilder(state) {
               <div class="preview-actions-bar">
                 <button class="btn btn-primary btn-block" id="btn-save-to-deck">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                  <span>Save to Pitch Deck</span>
+                  <span>Save to Deck</span>
                 </button>
 
                 <div class="actions-secondary-row">
@@ -297,11 +297,11 @@ export function renderPromptBuilder(state) {
             <!-- Pitch Deck Session Mini Quick Stats -->
             <div class="deck-session-card">
               <div class="session-card-header">
-                <span class="session-label">Session Pitch Deck:</span>
+                <span class="session-label">Session Deck:</span>
                 <span class="session-count-tag">${state.savedPrompts.length} prompt${state.savedPrompts.length === 1 ? '' : 's'} saved</span>
               </div>
               <button class="btn btn-sm btn-outline btn-block" id="btn-open-deck-drawer-from-preview">
-                <span>View & Export Pitch Deck Prompts</span>
+                <span>View & Export Deck</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>

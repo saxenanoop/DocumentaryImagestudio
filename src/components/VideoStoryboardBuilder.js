@@ -323,9 +323,9 @@ export function renderVideoStoryboardBuilder(state) {
               <span>Copy All Prompts</span>
             </button>
 
-            <button class="btn btn-sm btn-primary" id="btn-save-storyboard-to-deck" title="Save this entire storyboard to Pitch Deck Drawer">
+            <button class="btn btn-sm btn-primary" id="btn-save-storyboard-to-deck" title="Save this entire storyboard to Deck">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <span>Save Full Storyboard to Deck</span>
+              <span>Save to Deck</span>
             </button>
           </div>
         </div>
@@ -740,10 +740,10 @@ function renderGranularSceneCard(scene, index, totalScenes, themes, settings) {
               type="button" 
               class="btn btn-sm btn-outline btn-save-single-scene" 
               data-scene-id="${scene.id}"
-              title="Save this scene clip prompt to pitch deck drawer"
+              title="Save this scene clip prompt to Deck"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <span>Save Clip to Deck</span>
+              <span>Save to Deck</span>
             </button>
           </div>
         </footer>

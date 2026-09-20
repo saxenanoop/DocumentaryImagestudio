@@ -1594,6 +1594,30 @@ p {
   border-top: 1px solid var(--border-subtle);
 }
 
+.required-star {
+  color: var(--accent-terracotta);
+  font-weight: 700;
+  margin-left: 0.2rem;
+}
+
+.field-error-msg {
+  color: #C93B2B;
+  font-size: 0.775rem;
+  font-weight: 500;
+  margin-top: 0.35rem;
+}
+
+.form-input.is-invalid,
+.form-textarea.is-invalid {
+  border-color: #C93B2B !important;
+  background-color: #FFF8F7 !important;
+  outline-color: #C93B2B !important;
+}
+
+.copy-fallback-dialog {
+  max-width: 520px;
+}
+
 /* ==========================================================================
    Global Toast Notification
    ========================================================================== */
