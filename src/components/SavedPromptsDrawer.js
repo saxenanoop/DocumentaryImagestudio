@@ -7,17 +7,17 @@
 export function renderSavedPromptsDrawer(savedPrompts = [], isOpen = false) {
   return `
     <div class="drawer-backdrop ${isOpen ? 'is-open' : ''}" id="deck-drawer-backdrop" aria-hidden="${!isOpen}">
-      <aside class="saved-prompts-drawer ${isOpen ? 'is-open' : ''}" id="saved-prompts-drawer" role="dialog" aria-label="Pitch Deck Prompts Drawer" aria-modal="true">
+      <aside class="saved-prompts-drawer ${isOpen ? 'is-open' : ''}" id="saved-prompts-drawer" role="dialog" aria-label="Your Deck Drawer" aria-modal="true">
         <div class="drawer-header">
           <div class="drawer-header-title">
             <div class="drawer-badge-row">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              <h3>Pitch Deck Prompts</h3>
+              <h3>Your Deck</h3>
             </div>
             <span class="drawer-count-pill">${savedPrompts.length} item${savedPrompts.length === 1 ? '' : 's'}</span>
           </div>
 
-          <button class="btn-close-drawer" id="btn-close-deck-drawer" aria-label="Close pitch deck drawer">
+          <button class="btn-close-drawer" id="btn-close-deck-drawer" aria-label="Close Deck drawer">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
@@ -28,9 +28,9 @@ export function renderSavedPromptsDrawer(savedPrompts = [], isOpen = false) {
               <div class="empty-icon">
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
               </div>
-              <h4>Your Pitch Deck is Empty</h4>
-              <p>Configure prompts or video storyboards and click <strong>"Save to Pitch Deck"</strong> to collect them here.</p>
-              <p class="empty-hint">Saved items persist across brochure uploads throughout your entire session.</p>
+              <h4>Your Deck is Empty</h4>
+              <p>Configure prompts or video storyboards and click <strong>"Save to Deck"</strong> to collect them here.</p>
+              <p class="empty-hint">Saved items persist across campaign changes throughout your entire session.</p>
             </div>
           ` : `
             <div class="drawer-actions-bar">
@@ -42,8 +42,8 @@ export function renderSavedPromptsDrawer(savedPrompts = [], isOpen = false) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>Export .MD</span>
               </button>
-              <button class="btn btn-sm btn-ghost btn-danger-ghost" id="btn-clear-saved-deck" title="Clear all saved prompts">
-                <span>Clear</span>
+              <button type="button" class="btn btn-sm btn-ghost btn-danger-ghost" id="btn-clear-saved-deck" title="Clear all saved prompts from Deck">
+                <span>Clear all</span>
               </button>
             </div>
 

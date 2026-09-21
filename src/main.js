@@ -53,10 +53,12 @@ const state = {
   parseProgress: { stage: '', percent: 0 },
   parseError: null,
   isContextCollapsed: false,
+  isBriefExpanded: false,
   isDrawerOpen: false,
   isManualModalOpen: false,
   savedPrompts: loadSavedPrompts(),
   builderState: {
+    activeStep: 1,
     selectedThemeIndex: 0,
     setting: '',
     isCustomSetting: false,
@@ -93,12 +95,14 @@ function initBuilderFromCampaign(data, targetMode = null) {
   state.isParsing = false;
   state.parseError = null;
   state.isContextCollapsed = false;
+  state.isBriefExpanded = false;
 
   if (targetMode) {
     state.activeMode = targetMode;
   }
 
   state.builderState = {
+    activeStep: 1,
     selectedThemeIndex: 0,
     setting: settings[0] || 'Open-air community gathering space',
     isCustomSetting: false,
@@ -261,7 +265,7 @@ function attachEventListeners() {
     state.parseError = null;
     // Preserve current activeMode so user stays in video storyboard if they were there!
     renderApp();
-    showToast('Ready for new brochure upload. Saved deck items preserved!', 'info');
+    showToast('Ready to change campaign. Your saved deck stays!', 'info');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   if (btnHeaderUploadNew) btnHeaderUploadNew.addEventListener('click', handleUploadNew);
@@ -391,49 +395,121 @@ function attachEventListeners() {
 
   const manualForm = document.getElementById('manual-entry-form');
   if (manualForm) {
+    const inputPaste = document.getElementById('manual-paste-text');
+    const inputName = document.getElementById('manual-campaign-name');
+    const inputSummary = document.getElementById('manual-summary');
+    const inputThemes = document.getElementById('manual-themes-raw');
+    const inputSettings = document.getElementById('manual-settings-raw');
+
+    const setFieldError = (inputEl, errId, msg) => {
+      if (inputEl) inputEl.classList.add('is-invalid');
+      const errEl = document.getElementById(errId);
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+      }
+    };
+
+    const clearFieldError = (inputEl, errId) => {
+      if (inputEl) inputEl.classList.remove('is-invalid');
+      const errEl = document.getElementById(errId);
+      if (errEl) {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+      }
+    };
+
+    if (inputPaste) inputPaste.addEventListener('input', () => clearFieldError(inputPaste, 'err-manual-paste-text'));
+    if (inputName) inputName.addEventListener('input', () => clearFieldError(inputName, 'err-manual-campaign-name'));
+    if (inputSummary) inputSummary.addEventListener('input', () => clearFieldError(inputSummary, 'err-manual-summary'));
+    if (inputThemes) inputThemes.addEventListener('input', () => clearFieldError(inputThemes, 'err-manual-themes-raw'));
+    if (inputSettings) inputSettings.addEventListener('input', () => clearFieldError(inputSettings, 'err-manual-settings-raw'));
+
     manualForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const pastedText = document.getElementById('manual-paste-text')?.value || '';
-      const customName = document.getElementById('manual-campaign-name')?.value || '';
-      const customSummary = document.getElementById('manual-summary')?.value || '';
-      const rawThemes = document.getElementById('manual-themes-raw')?.value || '';
-      const rawSettings = document.getElementById('manual-settings-raw')?.value || '';
+      clearFieldError(inputPaste, 'err-manual-paste-text');
+      clearFieldError(inputName, 'err-manual-campaign-name');
+      clearFieldError(inputSummary, 'err-manual-summary');
+      clearFieldError(inputThemes, 'err-manual-themes-raw');
+      clearFieldError(inputSettings, 'err-manual-settings-raw');
 
-      if (pastedText.trim().length > 25) {
+      const pastedText = inputPaste?.value?.trim() || '';
+      const customName = inputName?.value?.trim() || '';
+      const customSummary = inputSummary?.value?.trim() || '';
+      const rawThemes = inputThemes?.value?.trim() || '';
+      const rawSettings = inputSettings?.value?.trim() || '';
+
+      if (pastedText.length >= 25) {
         state.isManualModalOpen = false;
         handleRawTextExtraction(pastedText);
-      } else if (customName.trim()) {
-        const themeList = rawThemes ? rawThemes.split(',').map(t => ({ label: t.trim(), description: `Documentary focus on ${t.trim()}` })).filter(t => t.label) : [
-          { label: "Community Storytelling", description: "Observational photojournalism." }
-        ];
-        const settingList = rawSettings ? rawSettings.split(',').map(s => s.trim()).filter(Boolean) : [
-          "Open-air community setting", "Field operations site"
-        ];
-
-        const manualData = {
-          campaign_name: customName.trim(),
-          one_line_summary: customSummary.trim() || "Community-driven outreach and storytelling initiative.",
-          themes: themeList,
-          settings: settingList,
-          tone_keywords: ["Dignified", "Authentic", "Communitarian", "Hopeful"],
-          subject_examples: ["Community member actively participating in local endeavor"]
-        };
-
-        state.isManualModalOpen = false;
-        initBuilderFromCampaign(manualData);
-        renderApp();
-        showToast('Manual campaign initialized', 'success');
-      } else {
-        showToast('Please paste brochure text or enter a campaign name', 'error');
+        return;
       }
+
+      // If user provided short text and no direct entry fields
+      if (pastedText.length > 0 && !customName && !customSummary && !rawThemes && !rawSettings) {
+        setFieldError(inputPaste, 'err-manual-paste-text', 'Pasted text must be at least 25 characters, or fill in the required fields below.');
+        inputPaste?.focus();
+        return;
+      }
+
+      // Validate required direct entry fields
+      let hasError = false;
+      let firstInvalid = null;
+
+      if (!customName) {
+        setFieldError(inputName, 'err-manual-campaign-name', 'Campaign name is required.');
+        hasError = true;
+        if (!firstInvalid) firstInvalid = inputName;
+      }
+
+      if (!customSummary) {
+        setFieldError(inputSummary, 'err-manual-summary', 'One-line summary is required.');
+        hasError = true;
+        if (!firstInvalid) firstInvalid = inputSummary;
+      }
+
+      if (!rawThemes) {
+        setFieldError(inputThemes, 'err-manual-themes-raw', 'At least one key theme is required.');
+        hasError = true;
+        if (!firstInvalid) firstInvalid = inputThemes;
+      }
+
+      if (!rawSettings) {
+        setFieldError(inputSettings, 'err-manual-settings-raw', 'At least one key setting is required.');
+        hasError = true;
+        if (!firstInvalid) firstInvalid = inputSettings;
+      }
+
+      if (hasError) {
+        if (firstInvalid) firstInvalid.focus();
+        return;
+      }
+
+      // Valid: build campaign data
+      const themeList = rawThemes.split(',').map(t => ({ label: t.trim(), description: `Documentary focus on ${t.trim()}` })).filter(t => t.label);
+      const settingList = rawSettings.split(',').map(s => s.trim()).filter(Boolean);
+
+      const manualData = {
+        campaign_name: customName,
+        one_line_summary: customSummary,
+        themes: themeList.length > 0 ? themeList : [{ label: customName, description: 'Documentary focus' }],
+        settings: settingList.length > 0 ? settingList : ['Documentary field location'],
+        tone_keywords: ["Dignified", "Authentic", "Communitarian", "Hopeful"],
+        subject_examples: ["Community member actively participating in local endeavor"]
+      };
+
+      state.isManualModalOpen = false;
+      initBuilderFromCampaign(manualData);
+      renderApp();
+      showToast('Manual campaign initialized', 'success');
     });
   }
 
-  // 6. Campaign Context Card Collapse Toggle
+  // 6. Campaign Brief Sticky Bar Toggle
   const btnToggleContextCard = document.getElementById('btn-toggle-context-card');
   if (btnToggleContextCard) {
     btnToggleContextCard.addEventListener('click', () => {
-      state.isContextCollapsed = !state.isContextCollapsed;
+      state.isBriefExpanded = !state.isBriefExpanded;
       renderApp();
     });
   }
@@ -442,6 +518,62 @@ function attachEventListeners() {
   // IMAGE PROMPT BUILDER EVENT LISTENERS
   // =========================================================================
   if (state.activeMode === 'image-prompts') {
+    // Stepper Navigation: Step Header Click
+    document.querySelectorAll('.studio-step-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-step-edit')) return;
+        const step = parseInt(header.getAttribute('data-step'), 10);
+        if (step && state.builderState.activeStep !== step) {
+          state.builderState.activeStep = step;
+          renderApp();
+        }
+      });
+    });
+
+    // Stepper Navigation: Step Edit Button Click
+    document.querySelectorAll('.btn-step-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const step = parseInt(btn.getAttribute('data-step-target'), 10);
+        if (step) {
+          state.builderState.activeStep = step;
+          renderApp();
+        }
+      });
+    });
+
+    // Stepper Navigation: Continue / Next Button Click
+    document.querySelectorAll('.btn-step-continue').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const nextStep = parseInt(btn.getAttribute('data-next-step'), 10);
+        if (nextStep) {
+          state.builderState.activeStep = nextStep;
+          renderApp();
+          const targetCard = document.getElementById(`step-card-${nextStep}`);
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    });
+
+    // Stepper Navigation: Back Button Click
+    document.querySelectorAll('.btn-step-back').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const prevStep = parseInt(btn.getAttribute('data-prev-step'), 10);
+        if (prevStep) {
+          state.builderState.activeStep = prevStep;
+          renderApp();
+          const targetCard = document.getElementById(`step-card-${prevStep}`);
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    });
+
     // Theme Cards Selection
     document.querySelectorAll('.theme-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -615,7 +747,7 @@ function attachEventListeners() {
         state.savedPrompts.unshift(newSavedPrompt);
         persistSavedPrompts(state.savedPrompts);
         renderApp();
-        showToast(`Saved still prompt to Pitch Deck (${state.savedPrompts.length} total)`, 'success');
+        showToast(`Saved still prompt to Deck (${state.savedPrompts.length} total)`, 'success');
       });
     }
 
@@ -625,6 +757,38 @@ function attachEventListeners() {
         initBuilderFromCampaign(state.campaignData);
         renderApp();
         showToast('Builder fields reset to brochure defaults', 'info');
+      });
+    }
+
+    const btnExportDeckDirect = document.getElementById('btn-export-deck-direct');
+    if (btnExportDeckDirect && state.campaignData) {
+      btnExportDeckDirect.addEventListener('click', () => {
+        if (!state.savedPrompts || state.savedPrompts.length === 0) {
+          const currentTheme = state.campaignData.themes[state.builderState.selectedThemeIndex] || { label: "General" };
+          const currentSetting = state.builderState.isCustomSetting 
+            ? state.builderState.customSetting 
+            : (state.builderState.setting || state.campaignData.settings[0] || "");
+          const promptText = document.getElementById('live-prompt-textarea')?.value || getLivePromptText();
+
+          state.savedPrompts.unshift({
+            id: 'prompt-' + Date.now(),
+            type: 'image',
+            campaignName: state.campaignData.campaign_name,
+            themeLabel: currentTheme.label,
+            setting: currentSetting,
+            lighting: state.builderState.lighting,
+            moodKeywords: state.builderState.selectedMoods,
+            composition: state.builderState.composition,
+            promptText,
+            timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+          persistSavedPrompts(state.savedPrompts);
+        }
+        const md = exportDeckPromptsMarkdown(state.savedPrompts);
+        const filename = `Documentary_Deck_Prompts_${new Date().toISOString().slice(0, 10)}.md`;
+        downloadFile(md, filename, 'text/markdown');
+        showToast('Exported Deck to .md sheet', 'success');
+        renderApp();
       });
     }
   }
@@ -772,6 +936,10 @@ function attachEventListeners() {
 
     // 7. Generate Full Storyboard Actions
     const handleGenerateStoryboard = () => {
+      if (state.storyboardState.scenes && state.storyboardState.scenes.length > 0) {
+        const confirmed = window.confirm('Regenerate entire storyboard? This will replace all scene prompts and any manual edits you have made.');
+        if (!confirmed) return;
+      }
       const result = generateVideoStoryboard(state.campaignData, state.storyboardState);
       state.storyboardState.scenes = result.scenes;
       state.storyboardState.isGenerated = true;
@@ -1064,12 +1232,14 @@ function attachEventListeners() {
       });
     });
 
-    // - Regenerate Single Scene Prompt
+    // - Regenerate Single Scene Prompt (Re-compose)
     document.querySelectorAll('.btn-regen-single-scene').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
         const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
         if (scene) {
+          const confirmed = window.confirm(`Re-compose prompt for Scene #${scene.sceneNumber}? Any manual edits in this prompt box will be replaced.`);
+          if (!confirmed) return;
           updateSceneLivePrompt(sceneId);
           showToast(`Re-composed Scene #${scene.sceneNumber} prompt`, 'success');
         }
@@ -1113,7 +1283,7 @@ function attachEventListeners() {
         state.savedPrompts.unshift(savedSceneItem);
         persistSavedPrompts(state.savedPrompts);
         renderApp();
-        showToast(`Scene #${scene.sceneNumber} saved to pitch deck!`, 'success');
+        showToast(`Scene #${scene.sceneNumber} saved to Deck!`, 'success');
       });
     });
 
@@ -1167,7 +1337,7 @@ function attachEventListeners() {
       });
     }
 
-    // 14. Save Entire Storyboard to Pitch Deck Drawer
+    // 14. Save Entire Storyboard to Deck Drawer
     const btnSaveStoryboardToDeck = document.getElementById('btn-save-storyboard-to-deck');
     if (btnSaveStoryboardToDeck && state.campaignData) {
       btnSaveStoryboardToDeck.addEventListener('click', () => {
@@ -1196,7 +1366,7 @@ function attachEventListeners() {
         state.savedPrompts.unshift(newSavedStoryboard);
         persistSavedPrompts(state.savedPrompts);
         renderApp();
-        showToast(`Full Video Storyboard saved to Pitch Deck (${state.savedPrompts.length} total)`, 'success');
+        showToast(`Full Video Storyboard saved to Deck (${state.savedPrompts.length} total)`, 'success');
       });
     }
   }
@@ -1220,7 +1390,7 @@ function attachEventListeners() {
       state.savedPrompts = state.savedPrompts.filter(p => p.id !== pId);
       persistSavedPrompts(state.savedPrompts);
       renderApp();
-      showToast('Item removed from pitch deck', 'info');
+      showToast('Item removed from Deck', 'info');
     });
   });
 
@@ -1228,7 +1398,7 @@ function attachEventListeners() {
   if (btnCopyAllSaved) {
     btnCopyAllSaved.addEventListener('click', () => {
       const md = exportDeckPromptsMarkdown(state.savedPrompts);
-      copyToClipboard(md, 'All pitch deck prompts copied as Markdown!', btnCopyAllSaved);
+      copyToClipboard(md, 'All Deck prompts copied as Markdown!', btnCopyAllSaved);
     });
   }
 
@@ -1236,20 +1406,22 @@ function attachEventListeners() {
   if (btnExportMarkdown) {
     btnExportMarkdown.addEventListener('click', () => {
       const md = exportDeckPromptsMarkdown(state.savedPrompts);
-      const filename = `Pitch_Deck_Documentary_Prompts_${new Date().toISOString().slice(0,10)}.md`;
+      const filename = `Documentary_Deck_Prompts_${new Date().toISOString().slice(0,10)}.md`;
       downloadFile(md, filename, 'text/markdown');
-      showToast('Downloaded pitch deck .md sheet', 'success');
+      showToast('Downloaded Deck .md sheet', 'success');
     });
   }
 
   const btnClearDeck = document.getElementById('btn-clear-saved-deck');
   if (btnClearDeck) {
-    btnClearDeck.addEventListener('click', () => {
-      if (confirm('Are you sure you want to clear all items from your pitch deck?')) {
+    btnClearDeck.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.confirm('Are you sure you want to clear all items from your Deck? This cannot be undone.')) {
         state.savedPrompts = [];
         persistSavedPrompts([]);
         renderApp();
-        showToast('Pitch deck cleared', 'info');
+        showToast('Deck cleared', 'info');
       }
     });
   }
@@ -1378,6 +1550,14 @@ function updateLivePromptPreview() {
   if (textarea) {
     textarea.value = getLivePromptText();
   }
+  const ratioBadge = document.querySelector('.studio-preview-sticky .ratio-badge');
+  if (ratioBadge) {
+    ratioBadge.textContent = state.builderState.aspectRatio || '16:9';
+  }
+  const strandBadge = document.querySelector('.studio-preview-sticky .strand-badge');
+  if (strandBadge && state.campaignData?.themes?.[state.builderState.selectedThemeIndex]) {
+    strandBadge.textContent = state.campaignData.themes[state.builderState.selectedThemeIndex].label;
+  }
 }
 
 /**
@@ -1471,6 +1651,93 @@ async function handleRawTextExtraction(text) {
 }
 
 /**
+ * Opens a modal with prompt text and 'Select all' if clipboard write fails
+ */
+function openClipboardFallbackModal(text) {
+  let modalEl = document.getElementById('clipboard-fallback-modal');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'clipboard-fallback-modal';
+    modalEl.className = 'modal-backdrop is-open';
+    modalEl.setAttribute('role', 'dialog');
+    modalEl.setAttribute('aria-label', 'Copy Prompt Fallback');
+    modalEl.setAttribute('aria-modal', 'true');
+    document.body.appendChild(modalEl);
+  } else {
+    modalEl.classList.add('is-open');
+  }
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog copy-fallback-dialog" role="document">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title">Copy Prompt</h3>
+          <p class="modal-subtitle">Clipboard access was blocked. Click Select all or copy manually.</p>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-clipboard-fallback" aria-label="Close copy modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 0 0.5rem 0;">
+        <textarea id="clipboard-fallback-textarea" class="form-textarea" rows="6" readonly style="font-family: var(--font-mono); font-size: 0.825rem; line-height: 1.5; resize: vertical; width: 100%;"></textarea>
+      </div>
+      <div class="modal-actions-bar" style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+        <button type="button" class="btn btn-ghost" id="btn-dismiss-clipboard-fallback">Close</button>
+        <button type="button" class="btn btn-primary" id="btn-select-all-clipboard">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span>Select all</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  const textarea = modalEl.querySelector('#clipboard-fallback-textarea');
+  if (textarea) {
+    textarea.value = text;
+  }
+
+  const closeModal = () => {
+    modalEl.classList.remove('is-open');
+    modalEl.remove();
+  };
+
+  const btnClose = modalEl.querySelector('#btn-close-clipboard-fallback');
+  const btnDismiss = modalEl.querySelector('#btn-dismiss-clipboard-fallback');
+  if (btnClose) btnClose.addEventListener('click', closeModal);
+  if (btnDismiss) btnDismiss.addEventListener('click', closeModal);
+  modalEl.addEventListener('click', (e) => {
+    if (e.target === modalEl) closeModal();
+  });
+
+  const btnSelectAll = modalEl.querySelector('#btn-select-all-clipboard');
+  if (btnSelectAll && textarea) {
+    btnSelectAll.addEventListener('click', () => {
+      textarea.focus();
+      textarea.select();
+      try {
+        const copied = document.execCommand('copy');
+        if (copied) {
+          showToast('Text copied to clipboard!', 'success');
+          btnSelectAll.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>Copied!</span>`;
+          setTimeout(() => closeModal(), 1000);
+        } else {
+          showToast('Text selected! Press Ctrl+C or ⌘+C to copy', 'info');
+        }
+      } catch {
+        showToast('Text selected! Press Ctrl+C or ⌘+C to copy', 'info');
+      }
+    });
+  }
+
+  setTimeout(() => {
+    if (textarea) {
+      textarea.focus();
+      textarea.select();
+    }
+  }, 100);
+}
+
+/**
  * Clipboard Copy Helper
  */
 function copyToClipboard(text, successMsg, targetBtn = null) {
@@ -1488,27 +1755,33 @@ function copyToClipboard(text, successMsg, targetBtn = null) {
   };
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(triggerSuccess).catch(() => fallbackCopy(text, successMsg, targetBtn));
+    navigator.clipboard.writeText(text)
+      .then(triggerSuccess)
+      .catch((err) => {
+        console.warn('navigator.clipboard failed, opening fallback modal:', err);
+        openClipboardFallbackModal(text);
+      });
   } else {
-    fallbackCopy(text, successMsg, targetBtn);
+    // Fallback when navigator.clipboard is unavailable
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (copied) {
+        triggerSuccess();
+      } else {
+        openClipboardFallbackModal(text);
+      }
+    } catch {
+      openClipboardFallbackModal(text);
+    }
   }
-}
-
-function fallbackCopy(text, successMsg, targetBtn) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  try {
-    document.execCommand('copy');
-    showToast(successMsg, 'success');
-  } catch {
-    showToast('Failed to copy', 'error');
-  }
-  document.body.removeChild(ta);
 }
 
 /**

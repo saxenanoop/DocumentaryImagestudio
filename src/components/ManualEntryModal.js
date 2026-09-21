@@ -26,39 +26,52 @@ export function renderManualEntryModal(isOpen = false) {
             <textarea 
               id="manual-paste-text" 
               class="form-textarea" 
-              rows="5" 
+              rows="4" 
               placeholder="Paste executive summary, program pillars, project description, or field locations here..."
             ></textarea>
+            <div class="field-error-msg" id="err-manual-paste-text" style="display: none;"></div>
           </div>
 
           <div class="modal-divider">
-            <span>OR ENTER FIELDS DIRECTLY</span>
+            <span>OR ENTER REQUIRED FIELDS DIRECTLY</span>
           </div>
 
           <div class="form-group-block">
-            <label class="field-label" for="manual-campaign-name">Campaign / Project Name</label>
+            <label class="field-label" for="manual-campaign-name">
+              <span>Campaign / Project Name</span>
+              <span class="required-star" title="Required">*</span>
+            </label>
             <input type="text" id="manual-campaign-name" class="form-input" placeholder="e.g. SolarGrid Rural Micro-Utilities" />
+            <div class="field-error-msg" id="err-manual-campaign-name" style="display: none;"></div>
           </div>
 
           <div class="form-group-block">
-            <label class="field-label" for="manual-summary">One-Line Summary</label>
+            <label class="field-label" for="manual-summary">
+              <span>One-Line Summary</span>
+              <span class="required-star" title="Required">*</span>
+            </label>
             <input type="text" id="manual-summary" class="form-input" placeholder="e.g. Decentralized solar energy powering women-led agricultural cooperatives" />
+            <div class="field-error-msg" id="err-manual-summary" style="display: none;"></div>
           </div>
 
           <div class="form-group-block">
             <label class="field-label" for="manual-themes-raw">
               <span>Key Themes / Strands</span>
+              <span class="required-star" title="Required">*</span>
               <span class="field-hint">Separate multiple themes with commas</span>
             </label>
             <input type="text" id="manual-themes-raw" class="form-input" placeholder="e.g. Women-Operated Milling Hubs, Clean Energy Tech Guild, Night Market Economy" />
+            <div class="field-error-msg" id="err-manual-themes-raw" style="display: none;"></div>
           </div>
 
           <div class="form-group-block">
             <label class="field-label" for="manual-settings-raw">
               <span>Key Settings / Locations</span>
+              <span class="required-star" title="Required">*</span>
               <span class="field-hint">Separate with commas</span>
             </label>
             <input type="text" id="manual-settings-raw" class="form-input" placeholder="e.g. Cooperative grain milling room, Rooftop solar installation, Evening marketplace" />
+            <div class="field-error-msg" id="err-manual-settings-raw" style="display: none;"></div>
           </div>
 
           <div class="modal-actions-bar">

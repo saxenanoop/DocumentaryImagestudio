@@ -136,7 +136,7 @@ function getLightingPhrase(lighting) {
 export function exportDeckPromptsMarkdown(savedPrompts = []) {
   const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  let md = `# Documentary Pitch Deck Assets\n`;
+  let md = `# Documentary Deck Assets\n`;
   md += `*Generated with Documentary Prompt Studio*\n`;
   md += `*Date: ${dateStr} | Total Items in Deck: ${savedPrompts.length}*\n\n`;
   md += `---\n\n`;

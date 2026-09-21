@@ -40,7 +40,7 @@ export function renderHeader(state) {
             role="tab"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <span>Image Prompts</span>
+            <span>Images</span>
           </button>
 
           <button 
@@ -52,22 +52,21 @@ export function renderHeader(state) {
             role="tab"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-            <span>Video Storyboard</span>
-            <span class="mode-qwen-badge">Qwen</span>
+            <span>Storyboard</span>
           </button>
         </nav>
 
         <div class="header-actions">
           ${hasActiveCampaign ? `
-            <button class="btn btn-secondary btn-sm" id="btn-header-upload-new" title="Upload a different brochure while keeping your saved prompts">
+            <button class="btn btn-secondary btn-sm" id="btn-header-upload-new" title="Your saved deck stays">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>Switch Brochure</span>
+              <span>Change campaign</span>
             </button>
           ` : ''}
 
-          <button class="btn-deck-drawer ${savedCount > 0 ? 'has-items' : ''}" id="btn-toggle-deck-drawer" aria-label="Open saved pitch deck prompts drawer">
+          <button class="btn-deck-drawer ${savedCount > 0 ? 'has-items' : ''}" id="btn-toggle-deck-drawer" aria-label="Open Deck drawer">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            <span>Pitch Deck</span>
+            <span>Deck</span>
             <span class="deck-count-badge" id="header-deck-count">${savedCount}</span>
           </button>
         </div>
