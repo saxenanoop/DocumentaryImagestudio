@@ -509,3 +509,19 @@ export function exportStoryboardAsMarkdown(storyboardState, campaignData) {
 
   return md;
 }
+
+/**
+ * Redistributes scene durations evenly across all scenes to fit target duration
+ */
+export function rebalanceSceneDurations(scenes, targetDuration) {
+  if (!scenes || scenes.length === 0) return scenes || [];
+  const count = scenes.length;
+  const target = Math.max(count * 3, Number(targetDuration) || 90);
+  const base = Math.floor(target / count);
+  const remainder = target % count;
+
+  scenes.forEach((s, idx) => {
+    s.duration = Math.max(3, base + (idx < remainder ? 1 : 0));
+  });
+  return scenes;
+}

@@ -21,6 +21,7 @@ import {
   regenerateSingleScenePrompt,
   exportStoryboardAsText,
   exportStoryboardAsMarkdown,
+  rebalanceSceneDurations,
   NARRATIVE_ARCS
 } from './services/videoStoryboardComposer.js';
 import { SAMPLE_BROCHURES } from './services/sampleBrochures.js';
@@ -77,6 +78,10 @@ const state = {
     sceneCount: 9,
     narrativeArc: 'problem-solution-impact',
     selectedThemes: [],
+    targetModel: 'qwen',
+    aspectRatio: '16:9',
+    selectedSceneId: null,
+    isAdvancedOpen: false,
     scenes: [],
     isGenerated: false
   }
@@ -124,6 +129,8 @@ function initBuilderFromCampaign(data, targetMode = null) {
     selectedThemes: themes.map(t => t.label),
     targetModel: 'qwen',
     aspectRatio: '16:9',
+    selectedSceneId: null,
+    isAdvancedOpen: false,
     scenes: [],
     isGenerated: false
   };
@@ -133,6 +140,7 @@ function initBuilderFromCampaign(data, targetMode = null) {
     const gen = generateVideoStoryboard(data, state.storyboardState);
     state.storyboardState.scenes = gen.scenes;
     state.storyboardState.isGenerated = true;
+    state.storyboardState.selectedSceneId = gen.scenes[0]?.id || null;
   }
 }
 
@@ -217,6 +225,7 @@ function attachEventListeners() {
           const gen = generateVideoStoryboard(state.campaignData, state.storyboardState);
           state.storyboardState.scenes = gen.scenes;
           state.storyboardState.isGenerated = true;
+          state.storyboardState.selectedSceneId = gen.scenes[0]?.id || null;
         }
         renderApp();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -794,40 +803,26 @@ function attachEventListeners() {
   }
 
   // =========================================================================
-  // VIDEO STORYBOARD BUILDER EVENT LISTENERS
+  // VIDEO STORYBOARD BUILDER EVENT LISTENERS (PHASE 2: TIMELINE & SINGLE SCENE)
   // =========================================================================
   if (state.activeMode === 'video-storyboard' && state.campaignData) {
-    // 1. Duration Slider
-    const durationSlider = document.getElementById('slider-target-duration');
-    const targetDurationVal = document.getElementById('target-duration-val');
-    const inputSceneCount = document.getElementById('input-scene-count');
-    const sceneCountBadge = document.getElementById('scene-count-badge');
-
-    if (durationSlider) {
-      durationSlider.addEventListener('input', (e) => {
+    // 1. Sticky Director Bar: Target Duration Select
+    const selectTargetDuration = document.getElementById('select-target-duration');
+    if (selectTargetDuration) {
+      selectTargetDuration.addEventListener('change', (e) => {
         const val = parseInt(e.target.value, 10);
         state.storyboardState.targetDuration = val;
-        if (targetDurationVal) {
-          const m = Math.floor(val / 60);
-          const s = val % 60;
-          targetDurationVal.textContent = val;
-          const unit = targetDurationVal.nextElementSibling;
-          if (unit) unit.textContent = `sec (${s > 0 ? `${m}m ${s}s` : `${m}m`})`;
-        }
-
         // Auto-calculate suggested scene count (~10s / scene)
         const autoCount = Math.max(4, Math.min(16, Math.round(val / 10)));
         state.storyboardState.sceneCount = autoCount;
-        if (inputSceneCount) inputSceneCount.value = autoCount;
-        if (sceneCountBadge) sceneCountBadge.textContent = `${autoCount} scenes`;
-
-        updateLivePacingDisplay();
+        renderApp();
       });
     }
 
-    // 2. Scene Count Stepper & Input
+    // 2. Sticky Director Bar: Scene Count Stepper & Input
     const btnSceneCountDec = document.getElementById('btn-scene-count-dec');
     const btnSceneCountInc = document.getElementById('btn-scene-count-inc');
+    const inputSceneCount = document.getElementById('input-scene-count');
 
     if (btnSceneCountDec) {
       btnSceneCountDec.addEventListener('click', () => {
@@ -836,7 +831,6 @@ function attachEventListeners() {
           cur -= 1;
           state.storyboardState.sceneCount = cur;
           if (inputSceneCount) inputSceneCount.value = cur;
-          if (sceneCountBadge) sceneCountBadge.textContent = `${cur} scenes`;
         }
       });
     }
@@ -848,7 +842,6 @@ function attachEventListeners() {
           cur += 1;
           state.storyboardState.sceneCount = cur;
           if (inputSceneCount) inputSceneCount.value = cur;
-          if (sceneCountBadge) sceneCountBadge.textContent = `${cur} scenes`;
         }
       });
     }
@@ -860,54 +853,11 @@ function attachEventListeners() {
         if (val > 16) val = 16;
         state.storyboardState.sceneCount = val;
         e.target.value = val;
-        if (sceneCountBadge) sceneCountBadge.textContent = `${val} scenes`;
       });
     }
 
-    // 3. Narrative Arc Selector Chips
-    document.querySelectorAll('.arc-card-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const arcId = chip.getAttribute('data-arc-id');
-        state.storyboardState.narrativeArc = arcId;
-        document.querySelectorAll('.arc-card-chip').forEach(c => c.classList.remove('is-selected'));
-        chip.classList.add('is-selected');
-        renderApp();
-      });
-    });
-
-    // 4. Themes Multi-Select Chips
-    document.querySelectorAll('.theme-multi-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const label = chip.getAttribute('data-theme-label');
-        let selected = state.storyboardState.selectedThemes || [];
-        if (selected.includes(label)) {
-          selected = selected.filter(l => l !== label);
-        } else {
-          selected = [...selected, label];
-        }
-        state.storyboardState.selectedThemes = selected;
-        renderApp();
-      });
-    });
-
-    const btnSelectAllThemes = document.getElementById('btn-select-all-themes');
-    if (btnSelectAllThemes && state.campaignData) {
-      btnSelectAllThemes.addEventListener('click', () => {
-        state.storyboardState.selectedThemes = (state.campaignData.themes || []).map(t => t.label);
-        renderApp();
-      });
-    }
-
-    const btnDeselectAllThemes = document.getElementById('btn-deselect-all-themes');
-    if (btnDeselectAllThemes) {
-      btnDeselectAllThemes.addEventListener('click', () => {
-        state.storyboardState.selectedThemes = [];
-        renderApp();
-      });
-    }
-
-    // 5. Target Video AI Model Selector Pills
-    document.querySelectorAll('#video-model-selector .model-pill-btn').forEach(btn => {
+    // 3. Sticky Director Bar: Video AI Model Selector Pills
+    document.querySelectorAll('#video-model-selector .director-pill-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const modelId = btn.getAttribute('data-model-id');
         state.storyboardState.targetModel = modelId;
@@ -920,8 +870,8 @@ function attachEventListeners() {
       });
     });
 
-    // 6. Video Aspect Ratio Switcher
-    document.querySelectorAll('#video-ratio-segmented .segmented-btn').forEach(btn => {
+    // 4. Sticky Director Bar: Video Aspect Ratio Switcher
+    document.querySelectorAll('#video-ratio-segmented .ratio-pill-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const ratio = btn.getAttribute('data-ratio');
         state.storyboardState.aspectRatio = ratio;
@@ -934,7 +884,16 @@ function attachEventListeners() {
       });
     });
 
-    // 7. Generate Full Storyboard Actions
+    // 5. Sticky Director Bar: Narrative Arc Dropdown
+    const selectNarrativeArc = document.getElementById('select-narrative-arc');
+    if (selectNarrativeArc) {
+      selectNarrativeArc.addEventListener('change', (e) => {
+        state.storyboardState.narrativeArc = e.target.value;
+        showToast('Updated narrative arc', 'info');
+      });
+    }
+
+    // 6. Generate Full Storyboard Actions (Sticky Bar & Empty State CTA)
     const handleGenerateStoryboard = () => {
       if (state.storyboardState.scenes && state.storyboardState.scenes.length > 0) {
         const confirmed = window.confirm('Regenerate entire storyboard? This will replace all scene prompts and any manual edits you have made.');
@@ -943,13 +902,14 @@ function attachEventListeners() {
       const result = generateVideoStoryboard(state.campaignData, state.storyboardState);
       state.storyboardState.scenes = result.scenes;
       state.storyboardState.isGenerated = true;
+      state.storyboardState.selectedSceneId = result.scenes[0]?.id || null;
       renderApp();
       showToast(`Generated ${result.scenes.length}-scene pitch video storyboard!`, 'success');
 
-      // Scroll smoothly to the first scene card
-      const firstCard = document.querySelector('.storyboard-scene-card');
-      if (firstCard) {
-        firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Scroll smoothly to single scene editor
+      const editor = document.getElementById('selected-scene-editor-container');
+      if (editor) {
+        editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     };
 
@@ -958,27 +918,224 @@ function attachEventListeners() {
     if (btnGenerateFull) btnGenerateFull.addEventListener('click', handleGenerateStoryboard);
     if (btnGenerateCta) btnGenerateCta.addEventListener('click', handleGenerateStoryboard);
 
-    // 8. Granular Per-Scene Director Controls (Matching Image Prompts section depth)
-    // - Curatorial Theme Dropdown per scene
-    document.querySelectorAll('.scene-theme-select').forEach(sel => {
-      sel.addEventListener('change', (e) => {
-        const sceneId = sel.getAttribute('data-scene-id');
-        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
-        if (scene) {
-          scene.theme = e.target.value;
-          updateSceneLivePrompt(sceneId);
+    // 7. Pacing Toolbar: Rebalance Durations
+    const btnRebalance = document.getElementById('btn-rebalance-durations');
+    if (btnRebalance) {
+      btnRebalance.addEventListener('click', () => {
+        const scenes = state.storyboardState.scenes || [];
+        const target = state.storyboardState.targetDuration || 90;
+        rebalanceSceneDurations(scenes, target);
+        renderApp();
+        showToast(`Rebalanced scene durations to match ${target}s target!`, 'success');
+      });
+    }
+
+    // 8. Sequence Timeline Strip: Tile Selection
+    document.querySelectorAll('.timeline-scene-tile').forEach(tile => {
+      tile.addEventListener('click', () => {
+        const sceneId = tile.getAttribute('data-scene-id');
+        if (state.storyboardState.selectedSceneId !== sceneId) {
+          state.storyboardState.selectedSceneId = sceneId;
+          renderApp();
+          const editor = document.getElementById('selected-scene-editor-container');
+          if (editor) {
+            editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+      tile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          tile.click();
         }
       });
     });
 
-    // - On-the-ground Setting / Location dropdown per scene
+    // 9. Add Scene Actions (Strip tile & Pacing bar button)
+    const handleAddScene = () => {
+      const scenes = state.storyboardState.scenes || [];
+      const newNum = scenes.length + 1;
+      const themesPool = state.campaignData?.themes || [];
+      const defaultTheme = themesPool[0]?.label || "Community";
+
+      const newScene = {
+        id: `scene-${Date.now()}-${newNum}`,
+        sceneNumber: newNum,
+        role: `Scene ${newNum} — Custom Narrative Moment`,
+        theme: defaultTheme,
+        setting: state.campaignData?.settings?.[0] || "Community workspace",
+        subject: "Community members in active collaboration",
+        duration: 10,
+        transition: "cross-dissolve",
+        motionStyle: "slow-push-in",
+        lensStyle: "35mm-prime",
+        lighting: "Natural daylight",
+        pacing: "realtime",
+        targetModel: state.storyboardState.targetModel || 'qwen',
+        aspectRatio: state.storyboardState.aspectRatio || '16:9',
+        visualPrompt: `Cinematic documentary video clip (1080p, 24fps). Slow deliberate push-in camera movement tracking towards the subject. Subject: Local community members actively collaborating with authentic agency. Location: On-the-ground setting with realistic natural depth. Lighting: Natural daylight, candid expression, dignified representation. Continuous natural motion dynamics. --ar ${state.storyboardState.aspectRatio || '16:9'}`,
+        voiceover: `"Every voice and contribution builds towards lasting community sovereignty."`,
+        audioCue: "Ambient environmental tone, distant voices"
+      };
+
+      scenes.push(newScene);
+      reindexScenes(scenes);
+      state.storyboardState.scenes = scenes;
+      state.storyboardState.selectedSceneId = newScene.id;
+      renderApp();
+      showToast('Added new clip to timeline', 'success');
+
+      // Scroll timeline strip to right to show new tile
+      setTimeout(() => {
+        const strip = document.getElementById('timeline-strip-scroll');
+        if (strip) strip.scrollLeft = strip.scrollWidth;
+      }, 50);
+    };
+
+    const btnAddSceneManual = document.getElementById('btn-add-scene-manual');
+    const btnAddSceneTile = document.getElementById('btn-add-scene-tile');
+    if (btnAddSceneManual) btnAddSceneManual.addEventListener('click', handleAddScene);
+    if (btnAddSceneTile) btnAddSceneTile.addEventListener('click', handleAddScene);
+
+    // 10. Advanced Parameters Disclosure Toggle
+    const btnToggleAdvanced = document.getElementById('btn-toggle-advanced-disclosure');
+    if (btnToggleAdvanced) {
+      btnToggleAdvanced.addEventListener('click', () => {
+        state.storyboardState.isAdvancedOpen = !state.storyboardState.isAdvancedOpen;
+        renderApp();
+      });
+    }
+
+    // 11. Single Selected Scene Editor Controls
+    // - Role Input
+    document.querySelectorAll('input[data-scene-field="role"]').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sceneId = inp.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.role = e.target.value;
+          const tile = document.querySelector(`.timeline-scene-tile[data-scene-id="${sceneId}"]`);
+          if (tile) {
+            const roleText = tile.querySelector('.tile-role-text');
+            if (roleText) roleText.textContent = scene.role;
+            tile.setAttribute('title', `Select Scene #${scene.sceneNumber}: ${scene.role}`);
+          }
+        }
+      });
+    });
+
+    // - Duration Input
+    document.querySelectorAll('input[data-scene-field="duration"]').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const sceneId = inp.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (!scene) return;
+        let val = parseInt(e.target.value, 10);
+        if (isNaN(val) || val < 1) val = 1;
+        scene.duration = val;
+        updateLivePacingDisplay();
+        const tile = document.querySelector(`.timeline-scene-tile[data-scene-id="${sceneId}"]`);
+        if (tile) {
+          const durationTag = tile.querySelector('.tile-duration');
+          if (durationTag) durationTag.textContent = `${scene.duration}s`;
+        }
+        const card = inp.closest('.single-scene-editor-card');
+        const footerMeta = card ? card.querySelector('.footer-meta') : null;
+        if (footerMeta) {
+          footerMeta.textContent = `Clip #${scene.sceneNumber} • ${scene.duration}s • ${cleanMotionLabel(scene.motionStyle)} • ${scene.aspectRatio || '16:9'}`;
+        }
+      });
+    });
+
+    // - Reorder (Earlier / Later)
+    document.querySelectorAll('.btn-move-scene-up').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sceneId = btn.getAttribute('data-scene-id');
+        const scenes = state.storyboardState.scenes;
+        const idx = scenes.findIndex(s => s.id === sceneId);
+        if (idx > 0) {
+          const temp = scenes[idx];
+          scenes[idx] = scenes[idx - 1];
+          scenes[idx - 1] = temp;
+          reindexScenes(scenes);
+          state.storyboardState.selectedSceneId = sceneId;
+          renderApp();
+          showToast('Scene moved earlier in timeline', 'info');
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-move-scene-down').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sceneId = btn.getAttribute('data-scene-id');
+        const scenes = state.storyboardState.scenes;
+        const idx = scenes.findIndex(s => s.id === sceneId);
+        if (idx >= 0 && idx < scenes.length - 1) {
+          const temp = scenes[idx];
+          scenes[idx] = scenes[idx + 1];
+          scenes[idx + 1] = temp;
+          reindexScenes(scenes);
+          state.storyboardState.selectedSceneId = sceneId;
+          renderApp();
+          showToast('Scene moved later in timeline', 'info');
+        }
+      });
+    });
+
+    // - Duplicate Scene
+    document.querySelectorAll('.btn-duplicate-scene').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sceneId = btn.getAttribute('data-scene-id');
+        const scenes = state.storyboardState.scenes;
+        const idx = scenes.findIndex(s => s.id === sceneId);
+        if (idx !== -1) {
+          const source = scenes[idx];
+          const copy = JSON.parse(JSON.stringify(source));
+          copy.id = `scene-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+          copy.role = `${source.role} (Continued)`;
+          scenes.splice(idx + 1, 0, copy);
+          reindexScenes(scenes);
+          state.storyboardState.selectedSceneId = copy.id;
+          renderApp();
+          showToast(`Duplicated Scene #${source.sceneNumber}`, 'success');
+        }
+      });
+    });
+
+    // - Delete Scene
+    document.querySelectorAll('.btn-delete-scene').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sceneId = btn.getAttribute('data-scene-id');
+        const scenes = state.storyboardState.scenes;
+        const idx = scenes.findIndex(s => s.id === sceneId);
+        if (idx === -1) return;
+
+        let nextSelectedId = null;
+        if (scenes.length > 1) {
+          if (idx > 0) {
+            nextSelectedId = scenes[idx - 1].id;
+          } else {
+            nextSelectedId = scenes[idx + 1].id;
+          }
+        }
+
+        const filtered = scenes.filter(s => s.id !== sceneId);
+        reindexScenes(filtered);
+        state.storyboardState.scenes = filtered;
+        state.storyboardState.selectedSceneId = nextSelectedId;
+        renderApp();
+        showToast('Scene removed from timeline', 'info');
+      });
+    });
+
+    // - Setting / Location Dropdown & Custom Input
     document.querySelectorAll('.scene-setting-select').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const sceneId = sel.getAttribute('data-scene-id');
         const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
         if (!scene) return;
 
-        const card = sel.closest('.storyboard-scene-card');
+        const card = sel.closest('.single-scene-editor-card');
         if (e.target.value === '__custom__') {
           scene.isCustomSetting = true;
           scene.setting = scene.customSetting || 'Custom frontline location';
@@ -1012,7 +1169,6 @@ function attachEventListeners() {
       });
     });
 
-    // - Custom Setting input per scene
     document.querySelectorAll('.scene-custom-setting-input').forEach(inp => {
       inp.addEventListener('input', (e) => {
         const sceneId = inp.getAttribute('data-scene-id');
@@ -1025,7 +1181,19 @@ function attachEventListeners() {
       });
     });
 
-    // - Subject Action input per scene
+    // - Curatorial Theme Dropdown
+    document.querySelectorAll('.scene-theme-select').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const sceneId = sel.getAttribute('data-scene-id');
+        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
+        if (scene) {
+          scene.theme = e.target.value;
+          updateSceneLivePrompt(sceneId);
+        }
+      });
+    });
+
+    // - Subject Action Input & Suggest Action
     document.querySelectorAll('.scene-subject-textarea').forEach(ta => {
       ta.addEventListener('input', (e) => {
         const sceneId = ta.getAttribute('data-scene-id');
@@ -1037,7 +1205,6 @@ function attachEventListeners() {
       });
     });
 
-    // - Suggest Action button per scene
     document.querySelectorAll('.btn-insert-subject-action').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
@@ -1057,7 +1224,7 @@ function attachEventListeners() {
         const randomAction = pool[Math.floor(Math.random() * pool.length)];
 
         scene.subject = randomAction;
-        const card = document.querySelector(`.storyboard-scene-card[data-scene-id="${sceneId}"]`);
+        const card = document.querySelector(`.single-scene-editor-card[data-scene-id="${sceneId}"]`);
         if (card) {
           const textarea = card.querySelector('.scene-subject-textarea');
           if (textarea) textarea.value = randomAction;
@@ -1067,7 +1234,7 @@ function attachEventListeners() {
       });
     });
 
-    // - Interactive Granular Chips per scene (motionStyle, lensStyle, lighting, pacing)
+    // - Scene Chips (motionStyle, lensStyle, lighting, pacing)
     document.querySelectorAll('[data-scene-chip-field]').forEach(chip => {
       chip.addEventListener('click', () => {
         const field = chip.getAttribute('data-scene-chip-field');
@@ -1098,7 +1265,7 @@ function attachEventListeners() {
       });
     });
 
-    // - Transition select per scene
+    // - Transition Select
     document.querySelectorAll('.scene-transition-select').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const sceneId = sel.getAttribute('data-scene-id');
@@ -1109,7 +1276,7 @@ function attachEventListeners() {
       });
     });
 
-    // - Voiceover and Audio Cue inputs per scene
+    // - Voiceover & Sound Design
     document.querySelectorAll('.scene-voiceover-input').forEach(inp => {
       inp.addEventListener('input', (e) => {
         const sceneId = inp.getAttribute('data-scene-id');
@@ -1131,7 +1298,7 @@ function attachEventListeners() {
       });
     });
 
-    // - Direct editable Visual Prompt textarea per scene
+    // - Visual Prompt Direct Editable Textarea
     document.querySelectorAll('.scene-prompt-textarea').forEach(ta => {
       ta.addEventListener('input', (e) => {
         const sceneId = ta.getAttribute('data-scene-id');
@@ -1142,97 +1309,7 @@ function attachEventListeners() {
       });
     });
 
-    // - Scene Role & Duration Inputs
-    document.querySelectorAll('.storyboard-scene-card input[data-scene-field="role"]').forEach(inp => {
-      inp.addEventListener('input', (e) => {
-        const sceneId = inp.getAttribute('data-scene-id');
-        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
-        if (scene) {
-          scene.role = e.target.value;
-        }
-      });
-    });
-
-    document.querySelectorAll('.storyboard-scene-card input[data-scene-field="duration"]').forEach(inp => {
-      inp.addEventListener('input', (e) => {
-        const sceneId = inp.getAttribute('data-scene-id');
-        const scene = (state.storyboardState.scenes || []).find(s => s.id === sceneId);
-        if (!scene) return;
-        let val = parseInt(e.target.value, 10);
-        if (isNaN(val) || val < 1) val = 1;
-        scene.duration = val;
-        updateLivePacingDisplay();
-        const card = inp.closest('.storyboard-scene-card');
-        const meta = card ? card.querySelector('.scene-meta-indicator') : null;
-        if (meta) meta.textContent = `Clip #${scene.sceneNumber} • ${scene.duration}s • ${scene.motionStyle}`;
-      });
-    });
-
-    // - Duplicate Scene Button
-    document.querySelectorAll('.btn-duplicate-scene').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const sceneId = btn.getAttribute('data-scene-id');
-        const scenes = state.storyboardState.scenes;
-        const idx = scenes.findIndex(s => s.id === sceneId);
-        if (idx !== -1) {
-          const source = scenes[idx];
-          const copy = JSON.parse(JSON.stringify(source));
-          copy.id = `scene-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-          copy.role = `${source.role} (Continued)`;
-          scenes.splice(idx + 1, 0, copy);
-          reindexScenes(scenes);
-          renderApp();
-          showToast(`Duplicated Scene #${source.sceneNumber}`, 'success');
-        }
-      });
-    });
-
-    // - Reorder Scene (Up / Down)
-    document.querySelectorAll('.btn-move-scene-up').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const sceneId = btn.getAttribute('data-scene-id');
-        const scenes = state.storyboardState.scenes;
-        const idx = scenes.findIndex(s => s.id === sceneId);
-        if (idx > 0) {
-          const temp = scenes[idx];
-          scenes[idx] = scenes[idx - 1];
-          scenes[idx - 1] = temp;
-          reindexScenes(scenes);
-          renderApp();
-          showToast('Scene moved up', 'info');
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-move-scene-down').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const sceneId = btn.getAttribute('data-scene-id');
-        const scenes = state.storyboardState.scenes;
-        const idx = scenes.findIndex(s => s.id === sceneId);
-        if (idx >= 0 && idx < scenes.length - 1) {
-          const temp = scenes[idx];
-          scenes[idx] = scenes[idx + 1];
-          scenes[idx + 1] = temp;
-          reindexScenes(scenes);
-          renderApp();
-          showToast('Scene moved down', 'info');
-        }
-      });
-    });
-
-    // - Delete Scene
-    document.querySelectorAll('.btn-delete-scene').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const sceneId = btn.getAttribute('data-scene-id');
-        const scenes = state.storyboardState.scenes.filter(s => s.id !== sceneId);
-        reindexScenes(scenes);
-        state.storyboardState.scenes = scenes;
-        renderApp();
-        showToast('Scene deleted', 'info');
-      });
-    });
-
-    // - Regenerate Single Scene Prompt (Re-compose)
+    // - Re-compose Single Scene Prompt (with confirmation)
     document.querySelectorAll('.btn-regen-single-scene').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
@@ -1246,7 +1323,7 @@ function attachEventListeners() {
       });
     });
 
-    // 10. Copy Single Scene Prompt
+    // - Copy Single Scene Prompt
     document.querySelectorAll('.btn-copy-scene-prompt').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
@@ -1257,7 +1334,7 @@ function attachEventListeners() {
       });
     });
 
-    // 11. Save Single Scene to Deck
+    // - Save Single Scene to Deck
     document.querySelectorAll('.btn-save-single-scene').forEach(btn => {
       btn.addEventListener('click', () => {
         const sceneId = btn.getAttribute('data-scene-id');
@@ -1287,48 +1364,7 @@ function attachEventListeners() {
       });
     });
 
-    // 12. Add Blank Scene Manually
-    const handleAddScene = () => {
-      const scenes = state.storyboardState.scenes || [];
-      const newNum = scenes.length + 1;
-      const themesPool = state.campaignData?.themes || [];
-      const defaultTheme = themesPool[0]?.label || "Community";
-
-      const newScene = {
-        id: `scene-${Date.now()}-${newNum}`,
-        sceneNumber: newNum,
-        role: `Scene ${newNum} — Custom Narrative Moment`,
-        theme: defaultTheme,
-        setting: state.campaignData?.settings?.[0] || "Community workspace",
-        subject: "Community members in active collaboration",
-        duration: 10,
-        transition: "cross-dissolve",
-        motionStyle: "slow-push-in",
-        lighting: "Natural daylight",
-        visualPrompt: `Cinematic documentary video clip (1080p, 24fps). Slow deliberate push-in camera movement tracking towards the subject. Subject: Local community members actively collaborating with authentic agency. Location: On-the-ground setting with realistic natural depth. Lighting: Natural daylight, candid expression, dignified representation. Continuous natural motion dynamics. --ar 16:9`,
-        voiceover: `"Every voice and contribution builds towards lasting community sovereignty."`
-      };
-
-      scenes.push(newScene);
-      reindexScenes(scenes);
-      state.storyboardState.scenes = scenes;
-      renderApp();
-      showToast('Added new scene to timeline', 'success');
-
-      // Scroll to newly added card
-      setTimeout(() => {
-        const allCards = document.querySelectorAll('.storyboard-scene-card');
-        const last = allCards[allCards.length - 1];
-        if (last) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    };
-
-    const btnAddSceneManual = document.getElementById('btn-add-scene-manual');
-    const btnAddSceneBottom = document.getElementById('btn-add-scene-bottom');
-    if (btnAddSceneManual) btnAddSceneManual.addEventListener('click', handleAddScene);
-    if (btnAddSceneBottom) btnAddSceneBottom.addEventListener('click', handleAddScene);
-
-    // 13. Copy Full Storyboard Text
+    // 12. Copy Full Storyboard Text
     const btnCopyFullStoryboard = document.getElementById('btn-copy-full-storyboard');
     if (btnCopyFullStoryboard && state.campaignData) {
       btnCopyFullStoryboard.addEventListener('click', () => {
@@ -1337,7 +1373,7 @@ function attachEventListeners() {
       });
     }
 
-    // 14. Save Entire Storyboard to Deck Drawer
+    // 13. Save Entire Storyboard to Deck Drawer
     const btnSaveStoryboardToDeck = document.getElementById('btn-save-storyboard-to-deck');
     if (btnSaveStoryboardToDeck && state.campaignData) {
       btnSaveStoryboardToDeck.addEventListener('click', () => {
@@ -1504,6 +1540,18 @@ function getLivePromptText() {
   });
 }
 
+function cleanMotionLabel(motionId) {
+  const map = {
+    'slow-push-in': 'Push-In',
+    'handheld-tracking': 'Handheld',
+    'static-wide': 'Static Wide',
+    'slow-dolly-orbit': 'Dolly Orbit',
+    'rack-focus': 'Rack Focus',
+    'aerial-reveal': 'Aerial Reveal'
+  };
+  return map[motionId] || motionId || 'Motion';
+}
+
 /**
  * Real-time reactive update of a single video scene prompt and UI display
  */
@@ -1518,27 +1566,46 @@ function updateSceneLivePrompt(sceneId) {
   const newPrompt = regenerateSingleScenePrompt(scene, state.campaignData);
   scene.visualPrompt = newPrompt;
 
-  const card = document.querySelector(`.storyboard-scene-card[data-scene-id="${sceneId}"]`);
+  // 1. Update single-scene editor card or storyboard-scene-card if visible
+  const card = document.querySelector(`.single-scene-editor-card[data-scene-id="${sceneId}"], .storyboard-scene-card[data-scene-id="${sceneId}"]`);
   if (card) {
     const promptArea = card.querySelector('.scene-prompt-textarea');
     if (promptArea && document.activeElement !== promptArea) {
       promptArea.value = newPrompt;
     }
 
-    const metaIndicator = card.querySelector('.scene-meta-indicator');
-    if (metaIndicator) {
-      metaIndicator.textContent = `Clip #${scene.sceneNumber} • ${scene.duration}s • ${scene.motionStyle}`;
+    const strandTag = card.querySelector('.strand-tag, .theme-tag-pill');
+    if (strandTag && scene.theme) {
+      strandTag.textContent = scene.theme;
     }
 
-    const themePill = card.querySelector('.theme-tag-pill');
-    if (themePill && scene.theme) {
-      themePill.textContent = scene.theme;
+    const modelTag = card.querySelector('.model-tag, .qwen-pill');
+    if (modelTag) {
+      modelTag.textContent = (scene.targetModel || state.storyboardState.targetModel || 'Qwen').toUpperCase();
     }
 
-    const modelPill = card.querySelector('.qwen-pill');
-    if (modelPill) {
-      modelPill.textContent = (scene.targetModel || state.storyboardState.targetModel || 'Qwen').toUpperCase();
+    const ratioTag = card.querySelector('.ratio-tag');
+    if (ratioTag) {
+      ratioTag.textContent = scene.aspectRatio || '16:9';
     }
+
+    const footerMeta = card.querySelector('.footer-meta, .scene-meta-indicator');
+    if (footerMeta) {
+      footerMeta.textContent = `Clip #${scene.sceneNumber} • ${scene.duration}s • ${cleanMotionLabel(scene.motionStyle)} • ${scene.aspectRatio || '16:9'}`;
+    }
+  }
+
+  // 2. Update sequence timeline strip tile
+  const tile = document.querySelector(`.timeline-scene-tile[data-scene-id="${sceneId}"]`);
+  if (tile) {
+    const motionTag = tile.querySelector('.tile-motion-tag');
+    if (motionTag) motionTag.textContent = cleanMotionLabel(scene.motionStyle);
+
+    const durationTag = tile.querySelector('.tile-duration');
+    if (durationTag) durationTag.textContent = `${scene.duration || 10}s`;
+
+    const roleText = tile.querySelector('.tile-role-text');
+    if (roleText && scene.role) roleText.textContent = scene.role;
   }
 }
 
@@ -1818,6 +1885,7 @@ window.addEventListener('hashchange', () => {
       const gen = generateVideoStoryboard(state.campaignData, state.storyboardState);
       state.storyboardState.scenes = gen.scenes;
       state.storyboardState.isGenerated = true;
+      state.storyboardState.selectedSceneId = gen.scenes[0]?.id || null;
     }
     renderApp();
   }
