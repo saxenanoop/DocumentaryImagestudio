@@ -14,12 +14,14 @@ export function renderCampaignContextCard(campaignData, isExpanded = false) {
     <div class="campaign-brief-sticky-bar ${isExpanded ? 'is-expanded' : ''}" id="campaign-brief-bar">
       <div class="container brief-bar-inner">
         <div class="brief-chip-group">
-          <div class="brief-lead-tag">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span>Active Brief</span>
+          <div class="brief-lead-row">
+            <div class="brief-lead-tag">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Active Brief</span>
+            </div>
+            <span class="brief-separator">/</span>
+            <span class="brief-campaign-name" title="${campaignData.campaign_name || ''}">${campaignData.campaign_name || 'Documentary Initiative'}</span>
           </div>
-          <span class="brief-separator">/</span>
-          <span class="brief-campaign-name" title="${campaignData.campaign_name || ''}">${campaignData.campaign_name || 'Documentary Initiative'}</span>
 
           ${toneChips.length > 0 ? `
             <div class="brief-tone-pills">

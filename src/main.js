@@ -71,7 +71,8 @@ const state = {
     cameraStyle: '35mm documentary prime lens',
     aspectRatio: '16:9',
     ethicalLock: true,
-    includeNegative: true
+    includeNegative: true,
+    isPromptSheetExpanded: false
   },
   storyboardState: {
     targetDuration: 90,
@@ -119,7 +120,8 @@ function initBuilderFromCampaign(data, targetMode = null) {
     cameraStyle: '35mm documentary prime lens',
     aspectRatio: '16:9',
     ethicalLock: true,
-    includeNegative: true
+    includeNegative: true,
+    isPromptSheetExpanded: false
   };
 
   state.storyboardState = {
@@ -268,6 +270,7 @@ function attachEventListeners() {
 
   // 2. Upload Actions & Multi-Brochure Support
   const btnHeaderUploadNew = document.getElementById('btn-header-upload-new');
+  const btnHeaderUploadNewMobile = document.getElementById('btn-header-upload-new-mobile');
   const btnUploadDifferent = document.getElementById('btn-upload-different');
   const handleUploadNew = () => {
     state.campaignData = null;
@@ -278,7 +281,53 @@ function attachEventListeners() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   if (btnHeaderUploadNew) btnHeaderUploadNew.addEventListener('click', handleUploadNew);
+  if (btnHeaderUploadNewMobile) {
+    btnHeaderUploadNewMobile.addEventListener('click', () => {
+      const dropdown = document.getElementById('header-overflow-dropdown');
+      if (dropdown) dropdown.classList.remove('is-open');
+      const btn = document.getElementById('btn-header-overflow-menu');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+      handleUploadNew();
+    });
+  }
   if (btnUploadDifferent) btnUploadDifferent.addEventListener('click', handleUploadNew);
+
+  // 2b. Mobile Header Overflow Menu Toggle & Outside Dismiss
+  const btnHeaderOverflow = document.getElementById('btn-header-overflow-menu');
+  const headerOverflowDropdown = document.getElementById('header-overflow-dropdown');
+  if (btnHeaderOverflow && headerOverflowDropdown) {
+    btnHeaderOverflow.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = headerOverflowDropdown.classList.toggle('is-open');
+      btnHeaderOverflow.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  }
+
+  // Dismiss header overflow dropdown when clicking outside or pressing Escape
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('header-overflow-dropdown');
+    const btn = document.getElementById('btn-header-overflow-menu');
+    if (dropdown && dropdown.classList.contains('is-open')) {
+      if (!dropdown.contains(e.target) && (!btn || !btn.contains(e.target))) {
+        dropdown.classList.remove('is-open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const dropdown = document.getElementById('header-overflow-dropdown');
+      const btn = document.getElementById('btn-header-overflow-menu');
+      if (dropdown && dropdown.classList.contains('is-open')) {
+        dropdown.classList.remove('is-open');
+        if (btn) {
+          btn.setAttribute('aria-expanded', 'false');
+          btn.focus();
+        }
+      }
+    }
+  });
 
   // 3. Dropzone & File Input Handling (Main Upload Zone)
   const dropzone = document.getElementById('upload-dropzone');
@@ -798,6 +847,29 @@ function attachEventListeners() {
         downloadFile(md, filename, 'text/markdown');
         showToast('Exported Deck to .md sheet', 'success');
         renderApp();
+      });
+    }
+
+    // Mobile Live Prompt Bottom Sheet Toggle
+    const btnToggleMobileSheet = document.getElementById('btn-toggle-mobile-sheet');
+    if (btnToggleMobileSheet) {
+      btnToggleMobileSheet.addEventListener('click', (e) => {
+        e.preventDefault();
+        state.builderState.isPromptSheetExpanded = !state.builderState.isPromptSheetExpanded;
+        const pane = document.querySelector('.studio-right-pane');
+        if (pane) {
+          pane.classList.toggle('is-sheet-expanded', state.builderState.isPromptSheetExpanded);
+          pane.classList.toggle('is-sheet-collapsed', !state.builderState.isPromptSheetExpanded);
+          const toggleText = btnToggleMobileSheet.querySelector('.sheet-toggle-text');
+          if (toggleText) {
+            toggleText.textContent = state.builderState.isPromptSheetExpanded ? 'Hide' : 'View Full Prompt';
+          }
+          btnToggleMobileSheet.setAttribute('aria-expanded', state.builderState.isPromptSheetExpanded ? 'true' : 'false');
+          const chevron = btnToggleMobileSheet.querySelector('.sheet-chevron');
+          if (chevron) {
+            chevron.classList.toggle('is-rotated', state.builderState.isPromptSheetExpanded);
+          }
+        }
       });
     }
   }
