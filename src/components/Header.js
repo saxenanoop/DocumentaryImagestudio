@@ -58,17 +58,47 @@ export function renderHeader(state) {
 
         <div class="header-actions">
           ${hasActiveCampaign ? `
-            <button class="btn btn-secondary btn-sm" id="btn-header-upload-new" title="Your saved deck stays">
+            <button class="btn btn-secondary btn-sm header-desktop-action" id="btn-header-upload-new" title="Your saved deck stays">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span>Change campaign</span>
             </button>
           ` : ''}
 
-          <button class="btn-deck-drawer ${savedCount > 0 ? 'has-items' : ''}" id="btn-toggle-deck-drawer" aria-label="Open Deck drawer">
+          <button class="btn-deck-drawer ${savedCount > 0 ? 'has-items' : ''}" id="btn-toggle-deck-drawer" aria-label="Open Deck drawer" title="Your Deck (${savedCount} saved)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            <span>Deck</span>
+            <span class="btn-deck-text">Deck</span>
             <span class="deck-count-badge" id="header-deck-count">${savedCount}</span>
           </button>
+
+          ${hasActiveCampaign ? `
+            <div class="header-overflow-wrap">
+              <button 
+                type="button" 
+                class="btn-icon-control btn-header-overflow" 
+                id="btn-header-overflow-menu" 
+                aria-label="More campaign actions" 
+                aria-haspopup="true" 
+                aria-expanded="false" 
+                title="More actions"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="2"/>
+                  <circle cx="19" cy="12" r="2"/>
+                  <circle cx="5" cy="12" r="2"/>
+                </svg>
+              </button>
+
+              <div class="header-overflow-dropdown" id="header-overflow-dropdown" role="menu" aria-label="More options">
+                <button type="button" class="overflow-menu-item" id="btn-header-upload-new-mobile" role="menuitem" title="Your saved deck stays">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <div class="menu-item-text">
+                    <span class="menu-item-title">Change campaign</span>
+                    <span class="menu-item-subtitle">Your saved deck stays</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          ` : ''}
         </div>
       </div>
     </header>

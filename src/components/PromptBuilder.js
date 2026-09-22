@@ -58,6 +58,7 @@ export function renderPromptBuilder(state) {
   const compClean = builderState.composition || 'Environmental portrait';
   const ratioClean = builderState.aspectRatio || '16:9';
   const step3Summary = `${cameraClean} • ${lightingClean} • ${compClean} • ${ratioClean}`;
+  const isPromptSheetExpanded = Boolean(builderState.isPromptSheetExpanded);
 
   return `
     <div class="prompt-builder-view">
@@ -159,51 +160,47 @@ export function renderPromptBuilder(state) {
                       <div class="setting-controls">
                         <select class="form-select" id="setting-select" aria-label="Select setting">
                           ${settings.map(s => `
-                            <option value="${s}" ${(!builderState.isCustomSetting && builderState.setting === s) ? 'selected' : ''}>
+                            <option value="${s}" ${builderState.setting === s ? 'selected' : ''}>
                               ${s}
                             </option>
                           `).join('')}
-                          <option value="__custom__" ${builderState.isCustomSetting ? 'selected' : ''}>
-                            ✏️ Custom specific location...
-                          </option>
+                          <option value="__custom__" ${builderState.isCustomSetting ? 'selected' : ''}>✏️ Custom Location...</option>
                         </select>
 
-                        <div class="custom-setting-wrap ${builderState.isCustomSetting ? '' : 'is-hidden'}" id="custom-setting-container">
-                          <input 
-                            type="text" 
-                            id="custom-setting-input" 
-                            class="form-input" 
-                            placeholder="e.g. Inside a solar equipment testing yurt at sunset" 
-                            value="${builderState.customSetting || ''}"
-                          />
-                        </div>
+                        ${builderState.isCustomSetting ? `
+                          <div class="custom-setting-wrap">
+                            <input 
+                              type="text" 
+                              class="form-input" 
+                              id="custom-setting-input" 
+                              placeholder="Enter specific physical setting..." 
+                              value="${builderState.customSetting || ''}"
+                            />
+                          </div>
+                        ` : ''}
                       </div>
                     </div>
 
-                    <!-- Subject Focus -->
+                    <!-- Subject Focus & Physical Action -->
                     <div class="form-group-block">
                       <div class="field-header">
-                        <label class="field-label" for="subject-input">
-                          <span>Subject & Human Agency</span>
-                        </label>
-                        <span class="field-hint">People, actions, gestures or interactions in the frame</span>
-                      </div>
-                      
-                      <div class="subject-input-wrapper">
-                        <textarea 
-                          id="subject-input" 
-                          class="form-textarea" 
-                          rows="2" 
-                          placeholder="${suggestedSubject}"
-                        >${builderState.subject || ''}</textarea>
-                        
-                        <div class="subject-suggestions-bar">
-                          <span class="suggestion-label">Suggested from brochure:</span>
-                          <button type="button" class="btn-chip-suggestion" id="btn-use-suggested-subject" title="Click to fill with suggested subject">
-                            "${suggestedSubject}"
+                        <div class="field-label-group">
+                          <label class="field-label" for="subject-input">
+                            <span>Subject Focus & Physical Agency</span>
+                          </label>
+                          <button type="button" class="btn-text-action" id="btn-insert-suggested-subject">
+                            Suggest from Brochure
                           </button>
                         </div>
+                        <span class="field-hint">Authentic individuals or groups engaged in meaningful field action</span>
                       </div>
+
+                      <textarea 
+                        class="form-textarea" 
+                        id="subject-input" 
+                        rows="2" 
+                        placeholder="${suggestedSubject}"
+                      >${builderState.subject || ''}</textarea>
                     </div>
 
                     <div class="step-nav-footer step-nav-split">
@@ -224,16 +221,16 @@ export function renderPromptBuilder(state) {
               <section class="studio-step-card ${activeStep === 3 ? 'is-expanded' : 'is-collapsed'}" id="step-card-3">
                 <header class="studio-step-header" data-step="3" tabindex="0" role="button" aria-expanded="${activeStep === 3}">
                   <div class="step-header-left">
-                    <span class="step-number-pill">3</span>
+                    <span class="step-number-pill ${activeStep > 3 ? 'is-completed' : ''}">3</span>
                     <div class="step-title-group">
-                      <h3 class="step-title">Look & Camera Aesthetics</h3>
+                      <h3 class="step-title">Look & Aesthetics</h3>
                       ${activeStep !== 3 ? `
                         <div class="step-collapsed-summary">
-                          <span class="summary-label">Selected:</span>
+                          <span class="summary-label">Summary:</span>
                           <span class="summary-value">${step3Summary}</span>
                         </div>
                       ` : `
-                        <span class="step-hint">Lighting, photographic lens, composition framing, and ratio</span>
+                        <span class="step-hint">Fine-tune atmosphere, optics, composition, lighting, and aspect ratio</span>
                       `}
                     </div>
                   </div>
@@ -249,103 +246,86 @@ export function renderPromptBuilder(state) {
 
                 ${activeStep === 3 ? `
                   <div class="studio-step-body">
-                    <!-- Mood & Atmosphere -->
+                    <!-- Atmospheric Tone Keywords -->
                     <div class="form-group-block">
                       <div class="field-header">
-                        <label class="field-label">
-                          <span>Mood & Atmosphere</span>
-                        </label>
-                        <span class="field-hint">Select or toggle emotional tone words</span>
+                        <label class="field-label">Documentary Tone & Atmosphere</label>
+                        <span class="field-hint">Select adjectives extracted from campaign narrative</span>
                       </div>
-
-                      <div class="chips-group" id="mood-chips-container">
-                        ${allToneChips.map(tone => {
-                          const isSelected = activeMoods.includes(tone);
+                      <div class="chips-wrap" id="mood-chips-group">
+                        ${allToneChips.map(chip => {
+                          const isSelected = activeMoods.includes(chip);
                           return `
                             <button 
                               type="button" 
-                              class="chip ${isSelected ? 'chip-selected' : ''}" 
-                              data-mood="${tone}"
-                              aria-pressed="${isSelected}"
+                              class="chip chip-sm ${isSelected ? 'chip-selected' : ''}" 
+                              data-chip-val="${chip}"
                             >
-                              ${isSelected ? '✓ ' : ''}${tone}
+                              ${isSelected ? '✓ ' : ''}${chip}
                             </button>
                           `;
                         }).join('')}
                       </div>
                     </div>
 
-                    <!-- Lighting & Time of Day -->
-                    <div class="form-group-block">
-                      <div class="field-header">
-                        <label class="field-label">
-                          <span>Lighting & Time of Day</span>
-                        </label>
-                        <span class="field-hint">Authentic natural and available light conditions</span>
+                    <!-- Lighting & Composition (2-Col Grid) -->
+                    <div class="form-row-2col">
+                      <div class="form-group-block">
+                        <label class="field-label" for="lighting-select">Lighting Condition</label>
+                        <select class="form-select form-select-sm" id="lighting-select" aria-label="Lighting condition">
+                          ${LIGHTING_OPTIONS.map(opt => `
+                            <option value="${opt.value}" ${builderState.lighting === opt.value ? 'selected' : ''}>
+                              ${opt.label}
+                            </option>
+                          `).join('')}
+                        </select>
                       </div>
 
-                      <div class="chips-group" id="lighting-chips-container">
-                        ${LIGHTING_OPTIONS.map(opt => {
-                          const isSelected = (builderState.lighting || "Natural daylight") === opt.label;
-                          return `
-                            <button 
-                              type="button" 
-                              class="chip ${isSelected ? 'chip-selected' : ''}" 
-                              data-lighting="${opt.label}"
-                              title="${opt.desc}"
-                              aria-pressed="${isSelected}"
-                            >
-                              ${isSelected ? '● ' : ''}${opt.label}
-                            </button>
-                          `;
-                        }).join('')}
+                      <div class="form-group-block">
+                        <label class="field-label" for="composition-select">Composition Framing</label>
+                        <select class="form-select form-select-sm" id="composition-select" aria-label="Composition framing">
+                          ${COMPOSITION_OPTIONS.map(opt => `
+                            <option value="${opt.value}" ${builderState.composition === opt.value ? 'selected' : ''}>
+                              ${opt.label}
+                            </option>
+                          `).join('')}
+                        </select>
                       </div>
                     </div>
 
-                    <!-- Composition & Framing -->
+                    <!-- Aspect Ratio Segmented Buttons -->
                     <div class="form-group-block">
-                      <div class="field-header">
-                        <label class="field-label">
-                          <span>Composition & Framing</span>
-                        </label>
-                        <span class="field-hint">Perspective, scale, and photographic distance</span>
-                      </div>
-
-                      <div class="chips-group" id="composition-chips-container">
-                        ${COMPOSITION_OPTIONS.map(opt => {
-                          const isSelected = (builderState.composition || "Environmental portrait") === opt.label;
-                          return `
-                            <button 
-                              type="button" 
-                              class="chip ${isSelected ? 'chip-selected' : ''}" 
-                              data-composition="${opt.label}"
-                              title="${opt.desc}"
-                              aria-pressed="${isSelected}"
-                            >
-                              ${isSelected ? '● ' : ''}${opt.label}
-                            </button>
-                          `;
-                        }).join('')}
+                      <label class="field-label">Aspect Ratio</label>
+                      <div class="segmented-control" id="aspect-ratio-segmented">
+                        ${['16:9', '4:3', '1:1', '9:16'].map(ratio => `
+                          <button 
+                            type="button" 
+                            class="segmented-btn ${builderState.aspectRatio === ratio ? 'is-active' : ''}" 
+                            data-ratio="${ratio}"
+                          >
+                            ${ratio}
+                          </button>
+                        `).join('')}
                       </div>
                     </div>
 
-                    <!-- Aspect Ratio & Camera Lens -->
+                    <!-- Camera & Lens Optics -->
                     <div class="form-group-block">
-                      <div class="field-header">
-                        <label class="field-label">
-                          <span>Aspect Ratio & Camera Perspective</span>
-                        </label>
-                      </div>
-
-                      <div class="ratio-segmented-row">
-                        <div class="segmented-control" id="ratio-segmented">
-                          ${['16:9', '4:3', '3:2', '1:1'].map(r => `
+                      <label class="field-label">Documentary Lens & Optics</label>
+                      <div class="lens-chips-group">
+                        <div class="chips-wrap" id="lens-quick-chips">
+                          ${[
+                            { id: '35mm documentary prime lens', label: '35mm Prime' },
+                            { id: '50mm natural perspective prime lens', label: '50mm Prime' },
+                            { id: '24mm documentary wide-angle lens', label: '24mm Wide' },
+                            { id: '85mm f/2.0 candid portrait lens', label: '85mm Portrait' }
+                          ].map(lens => `
                             <button 
                               type="button" 
-                              class="segmented-btn ${(builderState.aspectRatio || '16:9') === r ? 'is-active' : ''}" 
-                              data-ratio="${r}"
+                              class="chip chip-sm ${builderState.cameraStyle === lens.id ? 'chip-selected' : ''}" 
+                              data-lens-id="${lens.id}"
                             >
-                              ${r}
+                              ${builderState.cameraStyle === lens.id ? '✓ ' : ''}${lens.label}
                             </button>
                           `).join('')}
                         </div>
@@ -390,15 +370,27 @@ export function renderPromptBuilder(state) {
             </div>
           </div>
 
-          <!-- Right Pane: Sticky Studio Output & Deck Actions -->
-          <aside class="studio-right-pane">
+          <!-- Right Pane: Sticky Studio Output & Deck Actions (Transforms to Sticky Bottom Sheet on mobile) -->
+          <aside class="studio-right-pane ${isPromptSheetExpanded ? 'is-sheet-expanded' : 'is-sheet-collapsed'}">
             <div class="studio-preview-sticky">
               <div class="preview-card">
                 <div class="preview-card-header">
                   <div class="preview-header-meta">
-                    <span class="live-pill"><span class="pulse-dot"></span> Live Prompt</span>
-                    <span class="strand-badge">${currentTheme.label}</span>
-                    <span class="ratio-badge">${builderState.aspectRatio || '16:9'}</span>
+                    <div class="preview-meta-left">
+                      <span class="live-pill"><span class="pulse-dot"></span> Live Prompt</span>
+                      <span class="strand-badge">${currentTheme.label}</span>
+                      <span class="ratio-badge">${builderState.aspectRatio || '16:9'}</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      class="btn-mobile-sheet-toggle" 
+                      id="btn-toggle-mobile-sheet" 
+                      aria-expanded="${isPromptSheetExpanded}" 
+                      title="${isPromptSheetExpanded ? 'Collapse prompt preview' : 'Expand full prompt preview'}"
+                    >
+                      <span class="sheet-toggle-text">${isPromptSheetExpanded ? 'Hide' : 'View Full Prompt'}</span>
+                      <svg class="sheet-chevron ${isPromptSheetExpanded ? 'is-rotated' : ''}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="${isPromptSheetExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}"/></svg>
+                    </button>
                   </div>
                 </div>
 
