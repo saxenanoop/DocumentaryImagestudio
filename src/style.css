@@ -438,6 +438,93 @@ p {
   color: var(--accent-terracotta-hover);
 }
 
+/* Button Action Success Feedback Flash */
+.btn-copy-success,
+.btn-action-success {
+  background-color: var(--accent-sage) !important;
+  border-color: var(--accent-sage) !important;
+  color: #FFFFFF !important;
+  transition: all var(--transition-fast) !important;
+  pointer-events: none;
+}
+
+.btn-copy-success svg,
+.btn-action-success svg {
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scaleIn {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ==========================================================================
+   Accessibility & Focus Management
+   ========================================================================== */
+:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+}
+
+.mode-nav-tab:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+}
+
+.studio-step-header:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+  border-radius: var(--radius-lg);
+}
+
+.btn-step-edit:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+}
+
+.timeline-scene-tile:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+  z-index: 3;
+}
+
+.timeline-strip-scroll:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+}
+
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-outline:focus-visible,
+.btn-ghost:focus-visible,
+.pacing-rebalance-btn:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+}
+
+.director-pill-btn:focus-visible,
+.ratio-pill-btn:focus-visible,
+.director-model-pill:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+.upload-dropzone:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 3px;
+  border-color: var(--accent-terracotta);
+}
+
+.sample-card:focus-visible,
+.chip:focus-visible,
+.sample-manual-footer .btn-text-link:focus-visible {
+  outline: 2px solid var(--accent-terracotta);
+  outline-offset: 2px;
+}
+
 /* ==========================================================================
    Hero & Upload Section
    ========================================================================== */
@@ -582,6 +669,67 @@ p {
   line-height: 1.4;
 }
 
+/* Compact 3-Step Process Strip: Upload → Themes → Prompts */
+.landing-flow-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1.5rem;
+  margin-top: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  gap: 0.75rem;
+}
+
+.flow-step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.flow-step-num {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent-terracotta-subtle);
+  color: var(--accent-terracotta);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.flow-step-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.flow-step-title {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.flow-step-desc {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.25;
+}
+
+.flow-step-arrow {
+  color: var(--border-dark);
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 /* Sample Brochures Grid */
 .sample-brochures-wrap {
   margin-top: 2.25rem;
@@ -659,6 +807,27 @@ p {
   gap: 0.35rem;
   font-size: 0.8rem;
   font-weight: 700;
+  color: var(--accent-terracotta);
+}
+
+.sample-manual-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.sample-manual-footer .btn-text-link {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.sample-manual-footer .btn-text-link:hover {
   color: var(--accent-terracotta);
 }
 
@@ -1525,6 +1694,9 @@ p {
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   box-shadow: var(--shadow-md);
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
 }
 
 .preview-card-header {
@@ -1630,12 +1802,16 @@ p {
   border-radius: var(--radius-md);
   padding: 1rem;
   margin-bottom: 1rem;
+  height: 254px;
+  min-height: 254px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Stable height for live prompt textarea to prevent cursor jumps */
 .live-prompt-display {
   width: 100%;
-  height: 220px !important;
+  height: 100% !important;
   min-height: 220px !important;
   max-height: 220px !important;
   font-family: var(--font-serif);
@@ -1668,6 +1844,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  margin-top: auto;
 }
 
 .actions-secondary-row {
@@ -2275,7 +2452,17 @@ p {
   padding: 0;
 }
 
-.director-pills-row,
+.director-pills-row {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  height: auto;
+  min-height: 2.15rem;
+}
+
 .director-ratio-row {
   display: flex;
   align-items: center;
@@ -2283,7 +2470,7 @@ p {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   padding: 2px;
-  height: 2rem;
+  height: 2.15rem;
 }
 
 .director-pill-btn,
@@ -2304,6 +2491,32 @@ p {
   white-space: nowrap;
 }
 
+.director-model-pill {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.55rem;
+  line-height: 1.15;
+  gap: 1px;
+}
+
+.director-model-pill .pill-title {
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.director-model-pill .pill-model-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+  background: transparent;
+  padding: 0;
+  line-height: 1;
+}
+
 .director-pill-btn:hover,
 .ratio-pill-btn:hover {
   color: var(--text-primary);
@@ -2316,18 +2529,20 @@ p {
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-.pill-badge {
-  font-size: 0.65rem;
-  font-family: var(--font-mono);
-  background-color: var(--bg-page-alt);
-  padding: 0.05rem 0.3rem;
-  border-radius: var(--radius-pill);
-  color: var(--text-tertiary);
+.director-model-pill.is-active .pill-model-badge {
+  color: var(--accent-terracotta);
+  opacity: 0.85;
 }
 
-.director-pill-btn.is-active .pill-badge {
-  background-color: var(--accent-terracotta-subtle);
-  color: var(--accent-terracotta);
+.model-tag {
+  font-family: var(--font-mono);
+  font-size: 0.685rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background-color: var(--bg-page-alt);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.03em;
 }
 
 .director-arc-item .director-select {
@@ -3801,6 +4016,17 @@ p {
 
   .upload-dropzone {
     padding: 2rem 1rem;
+  }
+
+  .landing-flow-strip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .flow-step-arrow {
+    display: none;
   }
 
   .upload-section {

@@ -9,7 +9,7 @@ export function renderFooter() {
       <div class="footer-inner container">
         <div class="footer-brand">
           <p class="footer-text">
-            <strong>Documentary Prompt Studio</strong> — Internal creative toolkit for pitch decks & impact campaigns.
+            <strong>Documentary Prompt Studio</strong> — Internal creative toolkit for impact campaigns & decks.
           </p>
         </div>
         <div class="footer-meta">

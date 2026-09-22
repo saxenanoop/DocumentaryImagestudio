@@ -804,7 +804,8 @@ function attachEventListeners() {
 
         state.savedPrompts.unshift(newSavedPrompt);
         persistSavedPrompts(state.savedPrompts);
-        renderApp();
+        updateDeckHeaderBadge(state.savedPrompts.length);
+        flashButtonSuccess(btnSaveToDeck, 'Saved to Deck!');
         showToast(`Saved still prompt to Deck (${state.savedPrompts.length} total)`, 'success');
       });
     }
@@ -1431,7 +1432,8 @@ function attachEventListeners() {
 
         state.savedPrompts.unshift(savedSceneItem);
         persistSavedPrompts(state.savedPrompts);
-        renderApp();
+        updateDeckHeaderBadge(state.savedPrompts.length);
+        flashButtonSuccess(btn, 'Saved!');
         showToast(`Scene #${scene.sceneNumber} saved to Deck!`, 'success');
       });
     });
@@ -1473,7 +1475,8 @@ function attachEventListeners() {
 
         state.savedPrompts.unshift(newSavedStoryboard);
         persistSavedPrompts(state.savedPrompts);
-        renderApp();
+        updateDeckHeaderBadge(state.savedPrompts.length);
+        flashButtonSuccess(btnSaveStoryboardToDeck, 'Saved to Deck!');
         showToast(`Full Video Storyboard saved to Deck (${state.savedPrompts.length} total)`, 'success');
       });
     }
@@ -1585,6 +1588,13 @@ function updateLivePacingDisplay() {
     pacingFill.className = `pacing-bar-fill ${pacingClass}`;
     const percent = Math.min(100, Math.round((currentTotal / target) * 100));
     pacingFill.style.width = `${percent}%`;
+  }
+
+  const btnRebalance = document.getElementById('btn-rebalance-durations');
+  if (btnRebalance) {
+    btnRebalance.classList.toggle('is-over-target', delta > 0);
+    btnRebalance.title = `Fit to ${target}s: evenly redistributes scene lengths (${delta > 0 ? '+' + delta + 's over' : delta + 's under'})`;
+    btnRebalance.style.display = delta !== 0 ? 'inline-flex' : 'none';
   }
 }
 
@@ -1877,31 +1887,48 @@ function openClipboardFallbackModal(text) {
 }
 
 /**
+ * Flashes a brief check/success state on an action button
+ */
+function flashButtonSuccess(button, successText = 'Saved!') {
+  if (!button) return;
+  const origHtml = button.innerHTML;
+  button.classList.add('btn-action-success');
+  button.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${successText}</span>`;
+  setTimeout(() => {
+    button.classList.remove('btn-action-success');
+    button.innerHTML = origHtml;
+  }, 1800);
+}
+
+/**
+ * Updates the Deck badge and drawer button in the header without full re-render
+ */
+function updateDeckHeaderBadge(count) {
+  const badge = document.getElementById('header-deck-count');
+  if (badge) badge.textContent = count;
+  const drawerBtn = document.getElementById('btn-toggle-deck-drawer');
+  if (drawerBtn) {
+    drawerBtn.classList.toggle('has-items', count > 0);
+    drawerBtn.setAttribute('title', `Your Deck (${count} saved)`);
+  }
+  const sessionCountTag = document.querySelector('.session-count-tag');
+  if (sessionCountTag) {
+    sessionCountTag.textContent = `${count} prompt${count === 1 ? '' : 's'} saved`;
+  }
+}
+
+/**
  * Clipboard Copy Helper
  */
 function copyToClipboard(text, successMsg, targetBtn = null) {
   const triggerSuccess = () => {
     showToast(successMsg, 'success');
     if (targetBtn) {
-      const origHtml = targetBtn.innerHTML;
-      targetBtn.classList.add('btn-copy-success');
-      targetBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>Copied!</span>`;
-      setTimeout(() => {
-        targetBtn.classList.remove('btn-copy-success');
-        targetBtn.innerHTML = origHtml;
-      }, 2000);
+      flashButtonSuccess(targetBtn, 'Copied!');
     }
   };
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text)
-      .then(triggerSuccess)
-      .catch((err) => {
-        console.warn('navigator.clipboard failed, opening fallback modal:', err);
-        openClipboardFallbackModal(text);
-      });
-  } else {
-    // Fallback when navigator.clipboard is unavailable
+  const tryFallbackExec = () => {
     try {
       const ta = document.createElement('textarea');
       ta.value = text;
@@ -1920,6 +1947,17 @@ function copyToClipboard(text, successMsg, targetBtn = null) {
     } catch {
       openClipboardFallbackModal(text);
     }
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(triggerSuccess)
+      .catch((err) => {
+        console.warn('navigator.clipboard failed, attempting fallback execCommand:', err);
+        tryFallbackExec();
+      });
+  } else {
+    tryFallbackExec();
   }
 }
 

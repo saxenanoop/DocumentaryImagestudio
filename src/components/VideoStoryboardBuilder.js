@@ -151,12 +151,12 @@ export function renderVideoStoryboardBuilder(state) {
                   return `
                     <button 
                       type="button" 
-                      class="director-pill-btn ${isSelected ? 'is-active' : ''}" 
+                      class="director-pill-btn director-model-pill ${isSelected ? 'is-active' : ''}" 
                       data-model-id="${m.id}"
                       title="${m.label} (${m.badge})"
                     >
                       <span class="pill-title">${m.label.replace('Google ', '')}</span>
-                      <span class="pill-badge">${m.badge}</span>
+                      <span class="pill-model-badge">${m.badge}</span>
                     </button>
                   `;
                 }).join('')}
@@ -251,12 +251,10 @@ export function renderVideoStoryboardBuilder(state) {
           </div>
 
           <div class="pacing-actions-group">
-            ${durationDelta > 3 ? `
-              <button type="button" class="btn btn-sm btn-outline pacing-rebalance-btn" id="btn-rebalance-durations" title="Evenly distribute scene durations to fit ${targetDuration}s target">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 9l9-6 9 6M6 14l6 6 6-6"/></svg>
-                <span>Rebalance durations</span>
-              </button>
-            ` : ''}
+            <button type="button" class="btn btn-sm btn-outline pacing-rebalance-btn ${durationDelta > 0 ? 'is-over-target' : ''}" id="btn-rebalance-durations" style="${durationDelta === 0 ? 'display: none;' : ''}" title="Fit to ${targetDuration}s: evenly redistributes scene lengths (${durationDelta > 0 ? '+' + durationDelta + 's over' : durationDelta + 's under'})">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 9l9-6 9 6M6 14l6 6 6-6"/></svg>
+              <span>Rebalance durations</span>
+            </button>
 
             <button class="btn btn-sm btn-outline" id="btn-add-scene-manual" title="Insert a new scene into storyboard">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

@@ -25,7 +25,7 @@ export function renderHeader(state) {
           </div>
           <div class="brand-text">
             <a href="#" class="brand-title" id="nav-brand-home">Documentary Prompt Studio</a>
-            <span class="brand-tagline">AI visual & video prompt builder for campaign pitch decks</span>
+            <span class="brand-tagline">AI visual & video prompt builder for campaign decks</span>
           </div>
         </div>
 

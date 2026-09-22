@@ -45,10 +45,10 @@ export function renderUploadZone(state) {
   return `
     <div class="upload-section container">
       <div class="editorial-hero">
-        <div class="hero-eyebrow">Outreach & Pitch Deck Visuals</div>
+        <div class="hero-eyebrow">Outreach & Deck Visuals</div>
         <h1 class="hero-title">Transform Campaign Brochures into Documentary Visual Prompts</h1>
         <p class="hero-description">
-          Stop scrolling stock photos. Upload any outreach brochure, field brief, or campaign document to auto-extract themes and generate authentic documentary-style AI image prompts tailored for your pitch deck.
+          Stop scrolling stock photos. Upload any outreach brochure, field brief, or campaign document to auto-extract themes and generate authentic documentary-style AI image prompts tailored for your deck.
         </p>
       </div>
 
@@ -77,6 +77,33 @@ export function renderUploadZone(state) {
           </div>
         </div>
 
+        <!-- Compact 3-Step Process Strip: Upload → Themes → Prompts -->
+        <div class="landing-flow-strip" aria-label="Workflow: Upload to Themes to Prompts">
+          <div class="flow-step-item">
+            <span class="flow-step-num font-mono">1</span>
+            <div class="flow-step-text">
+              <span class="flow-step-title">Upload</span>
+              <span class="flow-step-desc">Brochure or field brief</span>
+            </div>
+          </div>
+          <span class="flow-step-arrow" aria-hidden="true">→</span>
+          <div class="flow-step-item">
+            <span class="flow-step-num font-mono">2</span>
+            <div class="flow-step-text">
+              <span class="flow-step-title">Themes</span>
+              <span class="flow-step-desc">Extracted strands & tone</span>
+            </div>
+          </div>
+          <span class="flow-step-arrow" aria-hidden="true">→</span>
+          <div class="flow-step-item">
+            <span class="flow-step-num font-mono">3</span>
+            <div class="flow-step-text">
+              <span class="flow-step-title">Prompts</span>
+              <span class="flow-step-desc">Deck visuals & storyboard</span>
+            </div>
+          </div>
+        </div>
+
         ${parseError ? `
           <div class="parse-error-banner" role="alert">
             <div class="error-icon">
@@ -91,8 +118,7 @@ export function renderUploadZone(state) {
 
         <div class="sample-brochures-wrap">
           <div class="sample-header">
-            <span class="sample-label">Or explore with a sample brochure:</span>
-            <button class="btn-text-link" id="btn-open-manual-entry-direct">Or start with a blank brief</button>
+            <span class="sample-label">Try a campaign:</span>
           </div>
           <div class="sample-grid">
             ${SAMPLE_BROCHURES.map(sample => `
@@ -106,6 +132,9 @@ export function renderUploadZone(state) {
                 </div>
               </button>
             `).join('')}
+          </div>
+          <div class="sample-manual-footer">
+            <button type="button" class="btn-text-link" id="btn-open-manual-entry-direct">Or start with a blank campaign brief</button>
           </div>
         </div>
       </div>
