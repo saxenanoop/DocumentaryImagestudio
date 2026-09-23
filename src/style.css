@@ -185,6 +185,14 @@ p {
   color: var(--accent-terracotta);
 }
 
+.brand-title-full {
+  display: inline;
+}
+
+.brand-title-short {
+  display: none;
+}
+
 .brand-tagline {
   font-size: 0.8rem;
   color: var(--text-tertiary);
@@ -2452,6 +2460,13 @@ p {
   padding: 0;
 }
 
+.director-model-scroll-wrapper {
+  position: relative;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+}
+
 .director-pills-row {
   display: flex;
   align-items: center;
@@ -2461,6 +2476,20 @@ p {
   padding: 2px;
   height: auto;
   min-height: 2.15rem;
+}
+
+#video-model-selector {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+#video-model-selector::-webkit-scrollbar {
+  display: none;
 }
 
 .director-ratio-row {
@@ -3540,7 +3569,20 @@ p {
 
   /* Reserve scroll clearance at the bottom of the left pane so controls are not obscured by the fixed bottom sheet */
   .studio-left-pane {
-    padding-bottom: 170px;
+    padding-bottom: 230px;
+  }
+
+  .studio-layout-grid:has(.studio-right-pane.is-sheet-expanded) .studio-left-pane {
+    padding-bottom: 400px;
+  }
+
+  .stepper-bottom-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem 0;
+    margin-top: 0.5rem;
+    border-top: 1px dashed var(--border-light);
   }
 
   /* Transform Sticky Right Pane to Sticky Mobile Bottom Sheet */
@@ -3589,17 +3631,38 @@ p {
     display: inline-flex;
   }
 
-  /* Collapsed Prompt Sheet: textarea hidden, actions immediately accessible */
+  /* Collapsed Prompt Sheet: compact header, actions immediately accessible without occluding workspace */
+  .studio-right-pane.is-sheet-collapsed .preview-card {
+    padding: 0.5rem 0.85rem 0.6rem 0.85rem;
+  }
+
+  .studio-right-pane.is-sheet-collapsed .preview-card-header {
+    margin-bottom: 0.35rem;
+  }
+
   .studio-right-pane.is-sheet-collapsed .preview-prompt-box {
     display: none;
   }
 
-  .studio-right-pane.is-sheet-collapsed .preview-card-header {
-    margin-bottom: 0.5rem;
+  .studio-right-pane.is-sheet-collapsed .preview-actions-bar {
+    gap: 0.4rem;
   }
 
-  .studio-right-pane.is-sheet-collapsed .preview-actions-bar {
-    gap: 0.5rem;
+  .studio-right-pane.is-sheet-collapsed .btn-primary {
+    min-height: 40px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .studio-right-pane.is-sheet-collapsed .actions-secondary-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+
+  .studio-right-pane.is-sheet-collapsed .actions-secondary-row .btn {
+    min-height: 36px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
   }
 
   /* Expanded Prompt Sheet: full textarea visible */
@@ -3686,7 +3749,7 @@ p {
   .brand-title {
     font-size: 0.95rem;
     white-space: nowrap;
-    max-width: 110px;
+    max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -4070,5 +4133,40 @@ p {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+}
+
+/* Extra-Narrow Smartphones (max-width: 480px) */
+@media (max-width: 480px) {
+  .brand-title {
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: 0.95rem;
+  }
+
+  .brand-title-full {
+    display: none !important;
+  }
+
+  .brand-title-short {
+    display: inline !important;
+    font-weight: 700;
+  }
+
+  .director-model-scroll-wrapper {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .director-model-scroll-wrapper::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, rgba(250, 248, 245, 0.95));
   }
 }

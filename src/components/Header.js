@@ -24,7 +24,10 @@ export function renderHeader(state) {
             </svg>
           </div>
           <div class="brand-text">
-            <a href="#" class="brand-title" id="nav-brand-home">Documentary Prompt Studio</a>
+            <a href="#" class="brand-title" id="nav-brand-home">
+              <span class="brand-title-full">Documentary Prompt Studio</span>
+              <span class="brand-title-short">Studio</span>
+            </a>
             <span class="brand-tagline">AI visual & video prompt builder for campaign decks</span>
           </div>
         </div>

@@ -40,10 +40,32 @@ function loadSavedPrompts() {
 
 function persistSavedPrompts(prompts) {
   try {
-    localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(prompts));
+    if (!prompts || prompts.length === 0) {
+      localStorage.removeItem(DECK_STORAGE_KEY);
+      localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify([]));
+    } else {
+      localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(prompts));
+    }
   } catch (err) {
     console.warn('Failed to save pitch deck prompts to localStorage:', err);
   }
+}
+
+/**
+ * Completely clears all Deck saved items from state, storage, badge, and UI
+ */
+function clearAllSavedDeck() {
+  state.savedPrompts = [];
+  persistSavedPrompts([]);
+  try {
+    localStorage.removeItem(DECK_STORAGE_KEY);
+    localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify([]));
+  } catch (err) {
+    console.warn('Failed to clear deck localStorage:', err);
+  }
+  updateDeckHeaderBadge(0);
+  renderApp();
+  showToast('Deck cleared', 'info');
 }
 
 // Global Application State (Single Shared Source of Truth)
@@ -810,14 +832,13 @@ function attachEventListeners() {
       });
     }
 
-    const btnResetBuilder = document.getElementById('btn-reset-builder');
-    if (btnResetBuilder && state.campaignData) {
-      btnResetBuilder.addEventListener('click', () => {
+    document.querySelectorAll('#btn-reset-builder, .btn-reset-builder').forEach(btn => {
+      btn.addEventListener('click', () => {
         initBuilderFromCampaign(state.campaignData);
         renderApp();
         showToast('Builder fields reset to brochure defaults', 'info');
       });
-    }
+    });
 
     const btnExportDeckDirect = document.getElementById('btn-export-deck-direct');
     if (btnExportDeckDirect && state.campaignData) {
@@ -883,12 +904,39 @@ function attachEventListeners() {
     const selectTargetDuration = document.getElementById('select-target-duration');
     if (selectTargetDuration) {
       selectTargetDuration.addEventListener('change', (e) => {
-        const val = parseInt(e.target.value, 10);
-        state.storyboardState.targetDuration = val;
-        // Auto-calculate suggested scene count (~10s / scene)
-        const autoCount = Math.max(4, Math.min(16, Math.round(val / 10)));
-        state.storyboardState.sceneCount = autoCount;
-        renderApp();
+        const prevDuration = state.storyboardState.targetDuration || 90;
+        const newDuration = parseInt(e.target.value, 10);
+        if (newDuration === prevDuration) return;
+
+        const scenes = state.storyboardState.scenes || [];
+        const autoCount = Math.max(4, Math.min(16, Math.round(newDuration / 10)));
+
+        if (scenes.length > 0 && scenes.length !== autoCount) {
+          if (autoCount < scenes.length) {
+            const confirmed = window.confirm(
+              `Changing target length to ${newDuration}s will adjust the sequence from ${scenes.length} to ${autoCount} clips. This will replace current scene prompts with the updated sequence. Proceed?`
+            );
+            if (!confirmed) {
+              e.target.value = prevDuration;
+              return;
+            }
+          }
+          state.storyboardState.targetDuration = newDuration;
+          state.storyboardState.sceneCount = autoCount;
+          const result = generateVideoStoryboard(state.campaignData, state.storyboardState);
+          state.storyboardState.scenes = result.scenes;
+          state.storyboardState.selectedSceneId = result.scenes[0]?.id || null;
+          rebalanceSceneDurations(state.storyboardState.scenes, newDuration);
+          renderApp();
+          showToast(`Target set to ${newDuration}s with ${autoCount} synchronized clips`, 'success');
+        } else {
+          state.storyboardState.targetDuration = newDuration;
+          if (scenes.length > 0) {
+            rebalanceSceneDurations(scenes, newDuration);
+          }
+          renderApp();
+          showToast(`Target length updated to ${newDuration}s`, 'info');
+        }
       });
     }
 
@@ -899,23 +947,29 @@ function attachEventListeners() {
 
     if (btnSceneCountDec) {
       btnSceneCountDec.addEventListener('click', () => {
-        let cur = parseInt(state.storyboardState.sceneCount || 8, 10);
-        if (cur > 4) {
-          cur -= 1;
-          state.storyboardState.sceneCount = cur;
-          if (inputSceneCount) inputSceneCount.value = cur;
+        const scenes = state.storyboardState.scenes || [];
+        if (scenes.length <= 4) return;
+        const lastScene = scenes[scenes.length - 1];
+        const confirmed = window.confirm(`Remove clip #${lastScene.sceneNumber} (${lastScene.role}) to shorten sequence to ${scenes.length - 1} clips?`);
+        if (!confirmed) return;
+        scenes.pop();
+        reindexScenes(scenes);
+        state.storyboardState.scenes = scenes;
+        state.storyboardState.sceneCount = scenes.length;
+        if (state.storyboardState.selectedSceneId === lastScene.id) {
+          state.storyboardState.selectedSceneId = scenes[scenes.length - 1]?.id || null;
         }
+        rebalanceSceneDurations(scenes, state.storyboardState.targetDuration || 90);
+        renderApp();
+        showToast(`Shortened sequence to ${scenes.length} clips`, 'info');
       });
     }
 
     if (btnSceneCountInc) {
       btnSceneCountInc.addEventListener('click', () => {
-        let cur = parseInt(state.storyboardState.sceneCount || 8, 10);
-        if (cur < 16) {
-          cur += 1;
-          state.storyboardState.sceneCount = cur;
-          if (inputSceneCount) inputSceneCount.value = cur;
-        }
+        const scenes = state.storyboardState.scenes || [];
+        if (scenes.length >= 16) return;
+        handleAddScene();
       });
     }
 
@@ -924,8 +978,48 @@ function attachEventListeners() {
         let val = parseInt(e.target.value, 10);
         if (isNaN(val) || val < 4) val = 4;
         if (val > 16) val = 16;
-        state.storyboardState.sceneCount = val;
-        e.target.value = val;
+        const scenes = state.storyboardState.scenes || [];
+        if (val === scenes.length) return;
+        if (val < scenes.length) {
+          const confirmed = window.confirm(`Shorten sequence from ${scenes.length} to ${val} clips? Last ${scenes.length - val} clip(s) will be removed.`);
+          if (!confirmed) {
+            e.target.value = scenes.length;
+            return;
+          }
+          scenes.splice(val);
+          reindexScenes(scenes);
+        } else {
+          while (scenes.length < val) {
+            const newNum = scenes.length + 1;
+            const themesPool = state.campaignData?.themes || [];
+            const defaultTheme = themesPool[(newNum - 1) % (themesPool.length || 1)]?.label || "Community";
+            scenes.push({
+              id: `scene-${Date.now()}-${newNum}`,
+              sceneNumber: newNum,
+              role: `Scene ${newNum} — Narrative Beat`,
+              theme: defaultTheme,
+              setting: state.campaignData?.settings?.[0] || "Community location",
+              subject: "Local participants engaged in mission activity",
+              duration: 10,
+              transition: "cross-dissolve",
+              motionStyle: "slow-push-in",
+              lensStyle: "35mm-prime",
+              lighting: "Natural daylight",
+              pacing: "realtime",
+              targetModel: state.storyboardState.targetModel || 'qwen',
+              aspectRatio: state.storyboardState.aspectRatio || '16:9',
+              visualPrompt: `Documentary footage shot on prime lens. Subject: Local participants engaged in authentic community activity. Setting: Genuine on-the-ground location. Lighting: Natural ambient light. --ar ${state.storyboardState.aspectRatio || '16:9'}`,
+              voiceover: `"Documentary narrative beat ${newNum} reflecting on-the-ground reality."`,
+              audioCue: "Ambient natural field audio"
+            });
+          }
+          reindexScenes(scenes);
+        }
+        state.storyboardState.scenes = scenes;
+        state.storyboardState.sceneCount = scenes.length;
+        rebalanceSceneDurations(scenes, state.storyboardState.targetDuration || 90);
+        renderApp();
+        showToast(`Adjusted sequence to ${scenes.length} clips`, 'success');
       });
     }
 
@@ -1054,6 +1148,7 @@ function attachEventListeners() {
       scenes.push(newScene);
       reindexScenes(scenes);
       state.storyboardState.scenes = scenes;
+      state.storyboardState.sceneCount = scenes.length;
       state.storyboardState.selectedSceneId = newScene.id;
       renderApp();
       showToast('Added new clip to timeline', 'success');
@@ -1168,6 +1263,8 @@ function attachEventListeners() {
           copy.role = `${source.role} (Continued)`;
           scenes.splice(idx + 1, 0, copy);
           reindexScenes(scenes);
+          state.storyboardState.scenes = scenes;
+          state.storyboardState.sceneCount = scenes.length;
           state.storyboardState.selectedSceneId = copy.id;
           renderApp();
           showToast(`Duplicated Scene #${source.sceneNumber}`, 'success');
@@ -1195,6 +1292,7 @@ function attachEventListeners() {
         const filtered = scenes.filter(s => s.id !== sceneId);
         reindexScenes(filtered);
         state.storyboardState.scenes = filtered;
+        state.storyboardState.sceneCount = filtered.length;
         state.storyboardState.selectedSceneId = nextSelectedId;
         renderApp();
         showToast('Scene removed from timeline', 'info');
@@ -1500,6 +1598,7 @@ function attachEventListeners() {
       const pId = btn.getAttribute('data-prompt-id');
       state.savedPrompts = state.savedPrompts.filter(p => p.id !== pId);
       persistSavedPrompts(state.savedPrompts);
+      updateDeckHeaderBadge(state.savedPrompts.length);
       renderApp();
       showToast('Item removed from Deck', 'info');
     });
@@ -1529,10 +1628,7 @@ function attachEventListeners() {
       e.preventDefault();
       e.stopPropagation();
       if (window.confirm('Are you sure you want to clear all items from your Deck? This cannot be undone.')) {
-        state.savedPrompts = [];
-        persistSavedPrompts([]);
-        renderApp();
-        showToast('Deck cleared', 'info');
+        clearAllSavedDeck();
       }
     });
   }

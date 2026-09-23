@@ -145,21 +145,23 @@ export function renderVideoStoryboardBuilder(state) {
             <!-- Target Video Model Pills -->
             <div class="director-param-item">
               <label class="director-param-label">Video Model</label>
-              <div class="director-pills-row" id="video-model-selector">
-                ${VIDEO_MODEL_OPTIONS.map(m => {
-                  const isSelected = targetModel === m.id;
-                  return `
-                    <button 
-                      type="button" 
-                      class="director-pill-btn director-model-pill ${isSelected ? 'is-active' : ''}" 
-                      data-model-id="${m.id}"
-                      title="${m.label} (${m.badge})"
-                    >
-                      <span class="pill-title">${m.label.replace('Google ', '')}</span>
-                      <span class="pill-model-badge">${m.badge}</span>
-                    </button>
-                  `;
-                }).join('')}
+              <div class="director-model-scroll-wrapper">
+                <div class="director-pills-row" id="video-model-selector">
+                  ${VIDEO_MODEL_OPTIONS.map(m => {
+                    const isSelected = targetModel === m.id;
+                    return `
+                      <button 
+                        type="button" 
+                        class="director-pill-btn director-model-pill ${isSelected ? 'is-active' : ''}" 
+                        data-model-id="${m.id}"
+                        title="${m.label} (${m.badge})"
+                      >
+                        <span class="pill-title">${m.label.replace('Google ', '')}</span>
+                        <span class="pill-model-badge">${m.badge}</span>
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
               </div>
             </div>
 
@@ -752,41 +754,73 @@ function renderStoryboardUploadHub(parseError) {
             <span class="filetype-pill">TXT / MD</span>
           </div>
         </div>
+      </div>
 
-        ${parseError ? `
-          <div class="parse-error-banner" role="alert">
-            <div class="error-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div class="error-msg-wrap">
-              <strong>Parsing Notice:</strong> ${parseError}
-            </div>
-            <button class="btn btn-sm btn-outline" id="btn-open-manual-entry">Fill manually instead</button>
+      <!-- Compact 3-Step Process Strip: Upload → Themes → Prompts -->
+      <div class="landing-flow-strip" aria-label="Workflow: Upload to Themes to Prompts">
+        <div class="flow-step-item">
+          <span class="flow-step-num font-mono">1</span>
+          <div class="flow-step-text">
+            <span class="flow-step-title">Upload</span>
+            <span class="flow-step-desc">Brochure or field brief</span>
           </div>
-        ` : ''}
-
-        <div class="sample-brochures-wrap">
-          <div class="sample-header">
-            <span class="sample-label">Or explore video storyboards with a sample brochure:</span>
-            <button class="btn-text-link" id="btn-open-manual-entry-direct">Or start with a blank brief</button>
+        </div>
+        <span class="flow-step-arrow" aria-hidden="true">→</span>
+        <div class="flow-step-item">
+          <span class="flow-step-num font-mono">2</span>
+          <div class="flow-step-text">
+            <span class="flow-step-title">Themes</span>
+            <span class="flow-step-desc">Extracted strands & tone</span>
           </div>
-          <div class="sample-grid">
-            ${SAMPLE_BROCHURES.map(sample => `
-              <button class="sample-card sample-card-video-trigger" data-sample-id="${sample.id}" type="button">
-                <div class="sample-card-tag">${sample.tag} • Video Arc</div>
-                <div class="sample-card-title">${sample.title}</div>
-                <div class="sample-card-desc">${sample.subtitle}</div>
-                <div class="sample-card-action">
-                  <span>Build Video Storyboard</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                </div>
-              </button>
-            `).join('')}
+        </div>
+        <span class="flow-step-arrow" aria-hidden="true">→</span>
+        <div class="flow-step-item">
+          <span class="flow-step-num font-mono">3</span>
+          <div class="flow-step-text">
+            <span class="flow-step-title">Prompts</span>
+            <span class="flow-step-desc">Deck visuals & storyboard</span>
           </div>
         </div>
       </div>
+
+      ${parseError ? `
+        <div class="parse-error-banner" role="alert">
+          <div class="error-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="error-msg-wrap">
+            <strong>Parsing Notice:</strong> ${parseError}
+          </div>
+          <button class="btn btn-sm btn-outline" id="btn-open-manual-entry">Fill manually instead</button>
+        </div>
+      ` : ''}
+
+      <div class="sample-brochures-wrap">
+        <div class="sample-brochures-header">
+          <h3>Try a campaign:</h3>
+          <p class="sample-brochures-sub">Explore pre-extracted impact brochures to test video storyboards immediately</p>
+        </div>
+        <div class="sample-grid">
+          ${SAMPLE_BROCHURES.map(sample => `
+            <button class="sample-card sample-card-video-trigger" data-sample-id="${sample.id}" type="button">
+              <div class="sample-card-tag">${sample.tag} • Video Arc</div>
+              <div class="sample-card-title">${sample.title}</div>
+              <div class="sample-card-desc">${sample.subtitle}</div>
+              <div class="sample-card-action">
+                <span>Build Video Storyboard</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="sample-manual-footer">
+          <button type="button" class="btn-text-link" id="btn-open-manual-entry-direct">Or start with a blank campaign brief</button>
+        </div>
+      </div>
     </div>
-  `;
+  </div>
+`;
 }
 
 function formatDurationMinutes(seconds) {
