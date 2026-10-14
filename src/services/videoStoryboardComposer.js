@@ -1,6 +1,6 @@
 /**
  * Video Storyboard Composer Service
- * Generates structured pitch video storyboards and video generation prompts (Qwen, Kling, Runway Gen-3, Sora)
+ * Generates structured pitch video storyboards and video generation prompts (Google Gemini Video / Veo AI)
  * with narrative arc structuring, granular camera dynamics, lighting, lens optics, and sound design.
  */
 
@@ -117,12 +117,9 @@ export const ATMOSPHERE_OPTIONS = [
 ];
 
 export const VIDEO_MODEL_OPTIONS = [
-  { id: "gemini", label: "Google Gemini", badge: "Veo AI" },
-  { id: "qwen", label: "Qwen Video", badge: "Primary" },
-  { id: "kling", label: "Kling AI", badge: "Kinetic" },
-  { id: "runway", label: "Runway Gen-3", badge: "Cinematic" },
-  { id: "sora", label: "OpenAI Sora", badge: "Photoreal" },
-  { id: "luma", label: "Luma Dream", badge: "Fluid" }
+  { id: "replicate", label: "Replicate MiniMax 01", badge: "Active API" },
+  { id: "gemini", label: "Google Gemini Video", badge: "Director" },
+  { id: "cinema", label: "Inbuilt AI Cinema", badge: "24fps Motion" }
 ];
 
 /**
@@ -263,18 +260,12 @@ export function composeQwenVideoPrompt({
   const lines = [];
 
   // Model prefix optimization
-  if (targetModel === 'gemini') {
+  if (targetModel === 'replicate') {
+    lines.push(`Cinematic documentary video clip, Replicate MiniMax Video-01 photoreal diffusion (${aspectRatio}, 1080p, ${pacing === 'slowmo' ? '60fps slow-motion' : '24fps'}).`);
+  } else if (targetModel === 'gemini') {
     lines.push(`Cinematic documentary video clip, Google Gemini Video / Veo photoreal cinematography (${aspectRatio}, 1080p, ${pacing === 'slowmo' ? '60fps slow-motion' : '24fps'}).`);
-  } else if (targetModel === 'kling') {
-    lines.push(`Cinematic documentary video clip, Kling AI 1.5 photoreal.`);
-  } else if (targetModel === 'runway') {
-    lines.push(`Documentary video shot on 35mm cinema prime, Runway Gen-3 photoreal.`);
-  } else if (targetModel === 'sora') {
-    lines.push(`Ultra-realistic observational documentary cinematography.`);
-  } else if (targetModel === 'luma') {
-    lines.push(`Documentary cinema video sequence, Luma Dream Machine photoreal motion (${aspectRatio}).`);
   } else {
-    lines.push(`Documentary cinema video clip (${aspectRatio}, 1080p, ${pacing === 'slowmo' ? '60fps slow-motion' : '24fps'}).`);
+    lines.push(`Authentic 35mm documentary cinema sequence (${aspectRatio}, 1080p, ${pacing === 'slowmo' ? '60fps slow-motion' : '24fps'}).`);
   }
 
   // Camera Motion & Optical Framing

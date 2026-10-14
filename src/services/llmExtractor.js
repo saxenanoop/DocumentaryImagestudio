@@ -35,16 +35,20 @@ Ensure the response is raw valid JSON without markdown fences. Keep themes betwe
  * @param {string} [customApiKey] - Optional user-provided API key
  * @returns {Promise<ExtractedBrochureData>}
  */
+import { getGeminiApiKey, callGeminiAPI } from './geminiService.js';
+
 export async function extractCampaignData(text, customApiKey = '') {
   if (!text || text.trim().length < 20) {
     throw new Error('Brochure text is too brief to extract campaign themes.');
   }
 
-  // First try backend / serverless endpoint
+  const activeKey = customApiKey || getGeminiApiKey() || '';
+
+  // 1. First try backend endpoint
   try {
     const headers = { 'Content-Type': 'application/json' };
-    if (customApiKey) {
-      headers['x-api-key'] = customApiKey;
+    if (activeKey) {
+      headers['x-api-key'] = activeKey;
     }
 
     const response = await fetch('/api/extract-brochure', {
@@ -60,10 +64,29 @@ export async function extractCampaignData(text, customApiKey = '') {
       }
     }
   } catch (err) {
-    console.warn('Backend LLM API endpoint unavailable or returned error, falling back to semantic parser:', err);
+    console.warn('Backend LLM API endpoint unavailable, trying direct Gemini client call:', err);
   }
 
-  // Intelligent Semantic Fallback Parser (guarantees 100% reliability offline or when API key is unconfigured)
+  // 2. Direct Gemini client extraction attempt
+  if (activeKey) {
+    try {
+      const rawJsonText = await callGeminiAPI({
+        prompt: `BROCHURE TEXT TO EXTRACT:\n${text.substring(0, 12000)}`,
+        systemInstruction: EXTRACTION_SYSTEM_PROMPT,
+        apiKey: activeKey,
+        temperature: 0.2
+      });
+      const cleaned = rawJsonText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (parsed && parsed.campaign_name && Array.isArray(parsed.themes) && parsed.themes.length > 0) {
+        return sanitizeExtractedData(parsed);
+      }
+    } catch (clientErr) {
+      console.warn('Direct Gemini client extraction error, falling back to semantic parser:', clientErr);
+    }
+  }
+
+  // 3. Intelligent Semantic Fallback Parser (guarantees 100% reliability offline or if API key lacks permissions)
   return parseBrochureSemantically(text);
 }
 

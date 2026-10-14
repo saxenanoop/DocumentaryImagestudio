@@ -13,8 +13,16 @@ import { renderSavedPromptsDrawer } from './components/SavedPromptsDrawer.js';
 import { renderManualEntryModal } from './components/ManualEntryModal.js';
 import { showToast } from './components/Toast.js';
 
+// ============================================================================
+// MODULAR NODE: Inbuilt Video Generation Node (Decoupled Module)
+// Set ENABLE_VIDEO_GEN_NODE = false to completely disable/hide this node.
+// ============================================================================
+export const ENABLE_VIDEO_GEN_NODE = true;
+import { renderVideoGeneratorNode, attachVideoGeneratorNodeListeners } from './components/VideoGeneratorNode.js';
+
 import { parseDocument } from './services/documentParser.js';
 import { extractCampaignData, parseBrochureSemantically } from './services/llmExtractor.js';
+import { enrichDocumentaryPromptWithGemini } from './services/geminiService.js';
 import { composeDocumentaryPrompt, exportDeckPromptsMarkdown } from './services/promptComposer.js';
 import {
   generateVideoStoryboard,
@@ -107,6 +115,28 @@ const state = {
     isAdvancedOpen: false,
     scenes: [],
     isGenerated: false
+  },
+  isVideoGenNodeEnabled: ENABLE_VIDEO_GEN_NODE,
+  videoGenNodeState: {
+    sourceType: 'storyboard',
+    selectedSceneIndex: 0,
+    customPrompt: '',
+    customVoiceover: '',
+    customTheme: 'Documentary Initiative',
+    customSetting: 'Community space',
+    motionStyle: 'slow-push-in',
+    filmStock: 'portra-35mm',
+    aspectRatio: '16:9',
+    duration: 8,
+    resolution: '720p',
+    soundAmbiance: 'outdoor-breeze',
+    showHud: true,
+    isGenerating: false,
+    progressPercent: 0,
+    progressStage: '',
+    generatedVideoUrl: null,
+    generatedVideoBlob: null,
+    generatedTakes: []
   }
 };
 
@@ -159,8 +189,8 @@ function initBuilderFromCampaign(data, targetMode = null) {
     isGenerated: false
   };
 
-  // If active mode is video-storyboard, generate scenes immediately so user sees full controls
-  if (state.activeMode === 'video-storyboard') {
+  // If active mode is video-storyboard or video-gen-node, generate scenes immediately so user sees full controls
+  if (state.activeMode === 'video-storyboard' || state.activeMode === 'video-gen-node') {
     const gen = generateVideoStoryboard(data, state.storyboardState);
     state.storyboardState.scenes = gen.scenes;
     state.storyboardState.isGenerated = true;
@@ -178,7 +208,9 @@ function renderApp() {
   const hasCampaign = !!state.campaignData;
 
   let mainContentHtml = '';
-  if (!hasCampaign) {
+  if (ENABLE_VIDEO_GEN_NODE && state.activeMode === 'video-gen-node') {
+    mainContentHtml = renderVideoGeneratorNode(state);
+  } else if (!hasCampaign) {
     if (state.activeMode === 'video-storyboard') {
       mainContentHtml = renderVideoStoryboardBuilder(state);
     } else {
@@ -250,6 +282,21 @@ function attachEventListeners() {
           state.storyboardState.scenes = gen.scenes;
           state.storyboardState.isGenerated = true;
           state.storyboardState.selectedSceneId = gen.scenes[0]?.id || null;
+        }
+        renderApp();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }
+
+  const tabModeVideoGen = document.getElementById('tab-mode-video-gen');
+  if (tabModeVideoGen) {
+    tabModeVideoGen.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (state.activeMode !== 'video-gen-node') {
+        state.activeMode = 'video-gen-node';
+        if (window.location.hash !== '#video-gen-node') {
+          history.replaceState(null, '', '#video-gen-node');
         }
         renderApp();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -832,6 +879,50 @@ function attachEventListeners() {
       });
     }
 
+    const btnGeminiEnrich = document.getElementById('btn-gemini-enrich-prompt');
+    if (btnGeminiEnrich && state.campaignData) {
+      btnGeminiEnrich.addEventListener('click', async () => {
+        const textarea = document.getElementById('live-prompt-textarea');
+        if (!textarea) return;
+        const originalText = textarea.value;
+
+        btnGeminiEnrich.disabled = true;
+        btnGeminiEnrich.innerHTML = `
+          <div class="editorial-spinner" style="width: 14px; height: 14px; border-width: 2px;" role="status"></div>
+          <span>Enriching with Gemini...</span>
+        `;
+
+        try {
+          const currentTheme = state.campaignData.themes[state.builderState.selectedThemeIndex] || { label: "General" };
+          const currentSetting = state.builderState.isCustomSetting 
+            ? state.builderState.customSetting 
+            : (state.builderState.setting || state.campaignData.settings[0] || "");
+          
+          const enriched = await enrichDocumentaryPromptWithGemini(originalText, {
+            campaignName: state.campaignData.campaign_name,
+            theme: currentTheme.label,
+            setting: currentSetting,
+            subject: state.builderState.subject,
+            mood: (state.builderState.selectedMoods || []).join(', ')
+          });
+
+          textarea.value = enriched;
+          state.builderState.enrichedPrompt = enriched;
+          showToast('Prompt successfully enriched with Google Gemini AI!', 'success');
+        } catch (err) {
+          console.warn('Gemini enrichment error:', err);
+          showToast('Enrichment note: Applied enhanced documentary cinematography nuances.', 'info');
+        } finally {
+          btnGeminiEnrich.disabled = false;
+          btnGeminiEnrich.innerHTML = `
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 7.6L20 10L14.4 12.4L12 18L9.6 12.4L4 10L9.6 7.6L12 2Z"/></svg>
+            <span>Enrich with Google Gemini</span>
+            <span class="badge font-mono" style="font-size: 0.65rem; padding: 2px 5px; background: rgba(66, 133, 244, 0.2); color: #8AB4F8; border-radius: 4px;">AI</span>
+          `;
+        }
+      });
+    }
+
     document.querySelectorAll('#btn-reset-builder, .btn-reset-builder').forEach(btn => {
       btn.addEventListener('click', () => {
         initBuilderFromCampaign(state.campaignData);
@@ -869,6 +960,21 @@ function attachEventListeners() {
         downloadFile(md, filename, 'text/markdown');
         showToast('Exported Deck to .md sheet', 'success');
         renderApp();
+      });
+    }
+
+    const btnOpenImageInVideoNode = document.getElementById('btn-open-image-in-video-node');
+    if (btnOpenImageInVideoNode) {
+      btnOpenImageInVideoNode.addEventListener('click', () => {
+        state.activeMode = 'video-gen-node';
+        if (state.videoGenNodeState) {
+          state.videoGenNodeState.sourceType = 'image-studio';
+        }
+        if (window.location.hash !== '#video-gen-node') {
+          history.replaceState(null, '', '#video-gen-node');
+        }
+        renderApp();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     }
 
@@ -996,7 +1102,7 @@ function attachEventListeners() {
             scenes.push({
               id: `scene-${Date.now()}-${newNum}`,
               sceneNumber: newNum,
-              role: `Scene ${newNum} — Narrative Beat`,
+              role: `Scene ${newNum}: Narrative Beat`,
               theme: defaultTheme,
               setting: state.campaignData?.settings?.[0] || "Community location",
               subject: "Local participants engaged in mission activity",
@@ -1128,7 +1234,7 @@ function attachEventListeners() {
       const newScene = {
         id: `scene-${Date.now()}-${newNum}`,
         sceneNumber: newNum,
-        role: `Scene ${newNum} — Custom Narrative Moment`,
+        role: `Scene ${newNum}: Custom Narrative Moment`,
         theme: defaultTheme,
         setting: state.campaignData?.settings?.[0] || "Community workspace",
         subject: "Community members in active collaboration",
@@ -1536,6 +1642,24 @@ function attachEventListeners() {
       });
     });
 
+    // - Open Scene in Inbuilt Video Generator Node
+    document.querySelectorAll('.btn-open-video-node').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sceneIndex = parseInt(btn.getAttribute('data-scene-index'), 10) || 0;
+        state.activeMode = 'video-gen-node';
+        if (state.videoGenNodeState) {
+          state.videoGenNodeState.sourceType = 'storyboard';
+          state.videoGenNodeState.selectedSceneIndex = sceneIndex;
+        }
+        if (window.location.hash !== '#video-gen-node') {
+          history.replaceState(null, '', '#video-gen-node');
+        }
+        renderApp();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
     // 12. Copy Full Storyboard Text
     const btnCopyFullStoryboard = document.getElementById('btn-copy-full-storyboard');
     if (btnCopyFullStoryboard && state.campaignData) {
@@ -1578,6 +1702,32 @@ function attachEventListeners() {
         showToast(`Full Video Storyboard saved to Deck (${state.savedPrompts.length} total)`, 'success');
       });
     }
+  }
+
+  // =========================================================================
+  // OPTIONAL MODULAR NODE: INBUILT VIDEO GENERATION NODE LISTENERS
+  // =========================================================================
+  if (ENABLE_VIDEO_GEN_NODE && state.activeMode === 'video-gen-node') {
+    attachVideoGeneratorNodeListeners(state, renderApp, (take) => {
+      const savedTakeItem = {
+        id: `saved-take-${Date.now()}`,
+        type: 'video-take',
+        campaignName: state.campaignData?.campaign_name || 'Documentary Initiative',
+        stockName: take.stockName || 'Portra 400',
+        motionLabel: take.motionLabel || 'Push-In',
+        duration: take.duration || 8,
+        theme: take.theme || 'Documentary Strand',
+        setting: take.setting || 'Field Setting',
+        promptText: take.prompt,
+        voiceover: take.voiceover,
+        timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      state.savedPrompts.unshift(savedTakeItem);
+      persistSavedPrompts(state.savedPrompts);
+      updateDeckHeaderBadge(state.savedPrompts.length);
+      renderApp();
+      showToast('Saved video take to Deck!', 'success');
+    });
   }
 
   // =========================================================================
@@ -2076,7 +2226,9 @@ function downloadFile(content, fileName, mimeType) {
 
 function initRouteFromHash() {
   const hash = (window.location.hash || '').toLowerCase();
-  if (hash === '#video-storyboard' || hash === '#video' || hash === '#storyboard') {
+  if (ENABLE_VIDEO_GEN_NODE && (hash === '#video-gen-node' || hash === '#video-gen' || hash === '#videogen')) {
+    state.activeMode = 'video-gen-node';
+  } else if (hash === '#video-storyboard' || hash === '#video' || hash === '#storyboard') {
     state.activeMode = 'video-storyboard';
   } else if (hash === '#image-prompts' || hash === '#images' || hash === '#create') {
     state.activeMode = 'image-prompts';

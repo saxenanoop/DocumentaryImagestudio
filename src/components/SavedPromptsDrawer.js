@@ -135,6 +135,41 @@ function renderSavedDeckCard(item) {
     `;
   }
 
+  if (itemType === 'video-take') {
+    return `
+      <div class="saved-prompt-card saved-take-card" data-prompt-id="${item.id}">
+        <div class="saved-card-header">
+          <div class="saved-meta-tags">
+            <span class="type-indicator-badge badge-video-take">
+              🎬 Video Take (${item.duration || 8}s • ${item.stockName || 'Portra 400'})
+            </span>
+            <span class="theme-tag">${item.motionLabel || 'Push-In'}</span>
+          </div>
+          <span class="card-timestamp">${item.timeAdded || ''}</span>
+        </div>
+
+        <div class="saved-card-body">
+          <div class="scene-role-tag">${item.theme || 'Documentary Strand'}</div>
+          <div class="saved-prompt-preview">${item.promptText || item.prompt}</div>
+          ${item.voiceover ? `<div class="saved-voiceover-preview"><strong>VO:</strong> ${item.voiceover}</div>` : ''}
+        </div>
+
+        <div class="saved-card-footer">
+          <div class="setting-pill-small">${item.setting || 'Location'}</div>
+          <div class="card-btn-group">
+            <button class="btn btn-sm btn-ghost btn-copy-card-prompt" data-prompt-id="${item.id}" title="Copy prompt">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>Copy</span>
+            </button>
+            <button class="btn btn-sm btn-ghost btn-delete-card-prompt" data-prompt-id="${item.id}" title="Remove from deck">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // Default: Still Image Prompt
   return `
     <div class="saved-prompt-card saved-image-card" data-prompt-id="${item.id}">

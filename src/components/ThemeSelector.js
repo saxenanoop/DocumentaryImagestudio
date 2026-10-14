@@ -10,15 +10,6 @@ export function renderThemeSelector(themes = [], selectedThemeIndex = 0) {
 
   return `
     <div class="theme-selector-wrapper">
-      <div class="field-header">
-        <label class="field-label">
-          <span class="field-num">1</span>
-          <span>Curatorial Theme / Program Strand</span>
-          <span class="field-badge">Extracted per upload</span>
-        </label>
-        <span class="field-hint">Select the narrative strand you are building visual prompts for</span>
-      </div>
-
       <div class="theme-cards-grid" role="radiogroup" aria-label="Curatorial Theme">
         ${themes.map((theme, index) => {
           const isSelected = index === selectedThemeIndex;

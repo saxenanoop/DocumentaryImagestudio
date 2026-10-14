@@ -57,6 +57,22 @@ export function renderHeader(state) {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
             <span>Storyboard</span>
           </button>
+
+          ${state.isVideoGenNodeEnabled !== false ? `
+            <button 
+              type="button" 
+              class="mode-nav-tab ${activeMode === 'video-gen-node' ? 'is-active' : ''}" 
+              id="tab-mode-video-gen"
+              data-mode="video-gen-node"
+              aria-selected="${activeMode === 'video-gen-node'}"
+              role="tab"
+              title="Inbuilt Video Generator Node (Decoupled)"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              <span>Video Gen</span>
+              <span class="node-pill-badge">Node</span>
+            </button>
+          ` : ''}
         </nav>
 
         <div class="header-actions">
@@ -70,7 +86,7 @@ export function renderHeader(state) {
           <button class="btn-deck-drawer ${savedCount > 0 ? 'has-items' : ''}" id="btn-toggle-deck-drawer" aria-label="Open Deck drawer" title="Your Deck (${savedCount} saved)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             <span class="btn-deck-text">Deck</span>
-            <span class="deck-count-badge" id="header-deck-count">${savedCount}</span>
+            <span class="deck-count-badge font-mono" id="header-deck-count">${savedCount}</span>
           </button>
 
           ${hasActiveCampaign ? `

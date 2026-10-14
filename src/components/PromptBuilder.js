@@ -424,6 +424,12 @@ export function renderPromptBuilder(state) {
                     <span>Save to Deck</span>
                   </button>
 
+                  <button type="button" class="btn btn-outline btn-block" id="btn-gemini-enrich-prompt" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; border-color: rgba(66, 133, 244, 0.4); background: rgba(66, 133, 244, 0.06); color: #8AB4F8;" title="Use Google Gemini AI to enrich documentary photojournalism cinematography details">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 7.6L20 10L14.4 12.4L12 18L9.6 12.4L4 10L9.6 7.6L12 2Z"/></svg>
+                    <span>Enrich with Google Gemini</span>
+                    <span class="badge font-mono" style="font-size: 0.65rem; padding: 2px 5px; background: rgba(66, 133, 244, 0.2); color: #8AB4F8; border-radius: 4px;">AI</span>
+                  </button>
+
                   <div class="actions-secondary-row">
                     <button type="button" class="btn btn-outline" id="btn-copy-live-prompt">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -433,6 +439,11 @@ export function renderPromptBuilder(state) {
                     <button type="button" class="btn btn-outline" id="btn-export-deck-direct" title="Export Deck prompts to Markdown (.md)">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                       <span>Export Deck</span>
+                    </button>
+
+                    <button type="button" class="btn btn-outline" id="btn-open-image-in-video-node" title="Render this prompt in Inbuilt Video Generator Node">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                      <span>Video Node ↗</span>
                     </button>
                   </div>
 

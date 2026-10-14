@@ -1,6 +1,6 @@
 /**
  * Video Storyboard Builder Component
- * Storyboard studio for Qwen, Kling, and Runway AI video generation with full granular control
+ * Storyboard studio for Google Gemini AI video generation with full granular control
  * on themes, settings, subjects, camera dynamics, lens optics, lighting, pacing, and sound design.
  */
 import { renderCampaignContextCard } from './CampaignContextCard.js';
@@ -63,7 +63,7 @@ export function renderVideoStoryboardBuilder(state) {
   const targetDuration = storyboardState.targetDuration || 90;
   const sceneCount = storyboardState.sceneCount || Math.max(4, Math.round(targetDuration / 10));
   const activeArc = storyboardState.narrativeArc || 'problem-solution-impact';
-  const targetModel = storyboardState.targetModel || 'qwen';
+  const targetModel = storyboardState.targetModel || 'replicate';
   const aspectRatio = storyboardState.aspectRatio || '16:9';
   const scenes = storyboardState.scenes || [];
   const hasScenes = scenes.length > 0;
@@ -525,6 +525,10 @@ function renderSelectedSceneEditor(scene, index, totalScenes, themes, settings, 
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 <span>Save to Deck</span>
               </button>
+              <button type="button" class="btn btn-sm btn-outline btn-open-video-node" data-scene-index="${index}" title="Open this clip in the Inbuilt Video Generator Node">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                <span>Video Node ↗</span>
+              </button>
             </div>
           </div>
 
@@ -731,7 +735,7 @@ function renderStoryboardUploadHub(parseError) {
         <div class="hero-eyebrow">Pitch Video Director</div>
         <h1 class="hero-title">Compose Documentary Video Storyboards from Any Brochure</h1>
         <p class="hero-description">
-          Upload any campaign brochure, field report, or pitch brief to automatically generate a complete 60–120s documentary video sequence for <strong>Google Gemini</strong>, <strong>Qwen Video</strong>, <strong>Kling AI</strong>, and <strong>Runway Gen-3</strong> with full camera, lens, and pacing control.
+          Upload any campaign brochure, field report, or pitch brief to automatically generate a complete 60–120s documentary video sequence for <strong>Replicate AI Video (MiniMax 01)</strong>, <strong>Google Gemini</strong>, and <strong>Inbuilt AI Cinema</strong> with full camera, lens, and pacing control.
         </p>
       </div>
 

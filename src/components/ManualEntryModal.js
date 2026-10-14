@@ -19,10 +19,14 @@ export function renderManualEntryModal(isOpen = false) {
 
         <form id="manual-entry-form" class="modal-form">
           <div class="form-group-block">
-            <label class="field-label" for="manual-paste-text">
+            <label class="field-label" for="manual-paste-text" style="display: flex; justify-content: space-between; align-items: center;">
               <span>Paste Brochure / Campaign Text</span>
-              <span class="field-hint">Paste full text to auto-extract structured themes</span>
+              <span class="badge font-mono" style="background: rgba(66, 133, 244, 0.15); color: #8AB4F8; font-size: 0.7rem; padding: 2px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.4 7.6L20 10L14.4 12.4L12 18L9.6 12.4L4 10L9.6 7.6L12 2Z"/></svg>
+                Google Gemini Active
+              </span>
             </label>
+            <span class="field-hint" style="margin-bottom: 0.4rem; display: block;">Paste full text to auto-extract structured themes via Gemini AI</span>
             <textarea 
               id="manual-paste-text" 
               class="form-textarea" 

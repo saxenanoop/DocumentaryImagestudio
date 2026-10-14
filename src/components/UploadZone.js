@@ -45,7 +45,10 @@ export function renderUploadZone(state) {
   return `
     <div class="upload-section container">
       <div class="editorial-hero">
-        <div class="hero-eyebrow">Outreach & Deck Visuals</div>
+        <div class="hero-eyebrow">
+          <span class="eyebrow-aperture-dot"></span>
+          <span>CAMPAIGN INTELLIGENCE • DOCUMENTARY OPTICS</span>
+        </div>
         <h1 class="hero-title">Transform Campaign Brochures into Documentary Visual Prompts</h1>
         <p class="hero-description">
           Stop scrolling stock photos. Upload any outreach brochure, field brief, or campaign document to auto-extract themes and generate authentic documentary-style AI image prompts tailored for your deck.
@@ -54,14 +57,21 @@ export function renderUploadZone(state) {
 
       <div class="upload-box-wrapper">
         <div class="upload-dropzone" id="upload-dropzone" tabindex="0" role="button" aria-label="Click or drag and drop a campaign brochure">
+          <span class="viewfinder-crosshair tl" aria-hidden="true"></span>
+          <span class="viewfinder-crosshair tr" aria-hidden="true"></span>
+          <span class="viewfinder-crosshair bl" aria-hidden="true"></span>
+          <span class="viewfinder-crosshair br" aria-hidden="true"></span>
           <input type="file" id="brochure-file-input" class="visually-hidden" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" />
           
           <div class="dropzone-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <polyline points="9 15 12 12 15 15"></polyline>
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="14.31" y1="8" x2="20.05" y2="17.94"></line>
+              <line x1="9.69" y1="8" x2="21.17" y2="8"></line>
+              <line x1="7.38" y1="12" x2="13.12" y2="2.06"></line>
+              <line x1="9.69" y1="16" x2="3.95" y2="6.06"></line>
+              <line x1="14.31" y1="16" x2="2.83" y2="16"></line>
+              <line x1="16.62" y1="12" x2="10.88" y2="21.94"></line>
             </svg>
           </div>
 
@@ -74,6 +84,7 @@ export function renderUploadZone(state) {
             <span class="filetype-pill">PDF</span>
             <span class="filetype-pill">DOCX</span>
             <span class="filetype-pill">TXT / MD</span>
+            <span class="filetype-pill" style="border-color: rgba(66, 133, 244, 0.4); color: #8AB4F8; background: rgba(66, 133, 244, 0.08);">⚡ Google Gemini Enabled</span>
           </div>
         </div>
 
@@ -118,17 +129,22 @@ export function renderUploadZone(state) {
 
         <div class="sample-brochures-wrap">
           <div class="sample-header">
-            <span class="sample-label">Try a campaign:</span>
+            <span class="sample-label">Try a curated field campaign:</span>
           </div>
           <div class="sample-grid">
             ${SAMPLE_BROCHURES.map(sample => `
               <button class="sample-card" data-sample-id="${sample.id}" type="button">
-                <div class="sample-card-tag">${sample.tag}</div>
+                <div class="sample-card-header">
+                  <span class="sample-card-tag">${sample.tag}</span>
+                  <span class="sample-card-badge font-mono">FIELD BRIEF</span>
+                </div>
                 <div class="sample-card-title">${sample.title}</div>
                 <div class="sample-card-desc">${sample.subtitle}</div>
                 <div class="sample-card-action">
                   <span>Load Sample</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                  <span class="btn-icon-bubble">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                  </span>
                 </div>
               </button>
             `).join('')}
