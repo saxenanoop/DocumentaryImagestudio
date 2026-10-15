@@ -15,7 +15,7 @@
  * 100% client-side, zero paid API keys required, completely decoupled from other modules.
  */
 
-import { DEFAULT_GEMINI_KEY, callGeminiAPI } from './geminiService.js';
+import { DEFAULT_GEMINI_KEY, getGeminiApiKey, callGeminiAPI } from './geminiService.js';
 import { DEFAULT_REPLICATE_KEY, getReplicateApiKey, generateReplicateVideoClip } from './replicateService.js';
 
 export const FILM_STOCK_EMULATIONS = [
@@ -211,18 +211,18 @@ export const CLOUD_VIDEO_PROVIDERS = [
   {
     id: 'replicate-video',
     name: 'Replicate AI Video (MiniMax 01)',
-    badge: 'Replicate • Real MP4',
-    desc: 'Powered directly by your Replicate API key. Synthesizes authentic high-definition documentary video clips via MiniMax Video-01.',
-    keyPlaceholder: 'r8_... (Enter your Replicate API token)',
+    badge: 'Embedded • Real MP4',
+    desc: 'Powered by embedded studio API. Synthesizes authentic high-definition documentary video clips via MiniMax Video-01.',
+    keyPlaceholder: 'Embedded studio API active (optional custom override)',
     keyLink: 'https://replicate.com',
     defaultKey: DEFAULT_REPLICATE_KEY
   },
   {
     id: 'gemini-video',
     name: 'Google Gemini (Cinematic Director)',
-    badge: 'Google AI • Director',
-    desc: 'Powered by Google Gemini. Synthesizes cinematic documentary direction, 24fps optical kinematics, and script cues.',
-    keyPlaceholder: 'Enter your Google Gemini API key...',
+    badge: 'Embedded • Director',
+    desc: 'Powered by embedded studio API. Synthesizes cinematic documentary direction, 24fps optical kinematics, and script cues.',
+    keyPlaceholder: 'Embedded studio API active (optional custom override)',
     keyLink: 'https://ai.google.dev',
     defaultKey: DEFAULT_GEMINI_KEY
   }
@@ -1169,7 +1169,7 @@ export async function triggerCloudVideoGeneration({
     };
   }
 
-  const cleanKey = (apiKey || '').trim() || DEFAULT_GEMINI_KEY;
+  const cleanKey = (apiKey || '').trim() || getGeminiApiKey() || DEFAULT_GEMINI_KEY;
   if (!cleanKey) {
     throw new Error('Google Gemini API key required. Please enter your key or switch to Inbuilt AI Cinema.');
   }

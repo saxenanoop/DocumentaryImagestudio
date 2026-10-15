@@ -47,10 +47,9 @@ export function renderVideoGeneratorNode(state) {
   const selectedCloudProvider = nodeState.selectedCloudProvider || 'replicate-video';
   nodeState.selectedCloudProvider = selectedCloudProvider;
   const activeCloudProvider = CLOUD_VIDEO_PROVIDERS.find(p => p.id === selectedCloudProvider) || CLOUD_VIDEO_PROVIDERS[0];
-  const cloudApiKey = nodeState.cloudApiKey || localStorage.getItem('doc_cloud_api_key_' + selectedCloudProvider) || activeCloudProvider.defaultKey || '';
-  if (!localStorage.getItem('doc_cloud_api_key_' + selectedCloudProvider) && activeCloudProvider.defaultKey) {
-    try { localStorage.setItem('doc_cloud_api_key_' + selectedCloudProvider, activeCloudProvider.defaultKey); } catch {}
-  }
+  const storedKey = (localStorage.getItem('doc_cloud_api_key_' + selectedCloudProvider) || '').trim();
+  const cloudApiKey = nodeState.cloudApiKey || storedKey || activeCloudProvider.defaultKey || '';
+  nodeState.cloudApiKey = cloudApiKey;
 
   // Selected scene if using storyboard source
   const selectedSceneIndex = Math.max(0, Math.min(nodeState.selectedSceneIndex || 0, scenes.length - 1));
@@ -466,29 +465,46 @@ export function renderVideoGeneratorNode(state) {
                 </div>
               </div>
 
-              <!-- API Key Input -->
-              <div class="node-form-group">
-                <label for="cloud-api-key-input" class="node-form-label">${activeCloudProvider.name} Key / Token</label>
-                <div class="cloud-key-input-wrap">
-                  <input 
-                    type="password" 
-                    id="cloud-api-key-input" 
-                    class="form-input form-input-sm node-input cloud-key-input" 
-                    placeholder="${activeCloudProvider.keyPlaceholder}" 
-                    value="${escapeAttr(cloudApiKey)}"
-                  />
-                  <button type="button" class="cloud-key-toggle-btn" id="btn-toggle-key-visibility" title="Show/Hide Key">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  </button>
+              <!-- Embedded Studio API Active Status Banner -->
+              <div class="embedded-api-status-banner" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #10B981; box-shadow: 0 0 8px #10B981; flex-shrink: 0;"></span>
+                  <div>
+                    <div style="font-size: 0.82rem; font-weight: 600; color: #10B981;">
+                      ${activeCloudProvider.name} Embedded & Active
+                    </div>
+                    <div style="font-size: 0.72rem; color: #9ca3af; margin-top: 2px;">
+                      Pre-configured studio access. No API key required from visitors.
+                    </div>
+                  </div>
                 </div>
-                <div class="cloud-key-hint-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-                  <button type="button" class="btn btn-xs btn-outline" id="btn-test-cloud-key" style="font-size: 0.72rem; padding: 3px 9px;">
-                    🔍 Test ${selectedCloudProvider === 'replicate-video' ? 'Replicate' : 'Gemini'} Key Status
-                  </button>
-                  <a href="${activeCloudProvider.keyLink}" target="_blank" rel="noopener noreferrer" class="cloud-key-link">${activeCloudProvider.name} ↗</a>
-                </div>
-                <div id="cloud-key-test-result" style="display: none; margin-top: 8px; font-size: 0.76rem; border-radius: 4px; padding: 6px 10px; line-height: 1.4;"></div>
+                <button type="button" class="btn btn-xs btn-outline" id="btn-test-cloud-key" style="font-size: 0.72rem; padding: 4px 10px; border-color: rgba(16, 185, 129, 0.35); color: #10B981; white-space: nowrap; flex-shrink: 0;">
+                  🔍 Verify API
+                </button>
               </div>
+              <div id="cloud-key-test-result" style="display: none; margin-bottom: 12px; font-size: 0.76rem; border-radius: 6px; padding: 8px 12px; line-height: 1.4;"></div>
+
+              <!-- Optional Custom Key Override Collapsible -->
+              <details class="advanced-key-override" style="margin-bottom: 12px; font-size: 0.74rem;">
+                <summary style="cursor: pointer; user-select: none; color: #888; font-family: var(--font-mono, monospace);">
+                  ⚙️ Custom API Key Override (Optional)
+                </summary>
+                <div style="margin-top: 8px; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px;">
+                  <label for="cloud-api-key-input" class="node-form-label" style="margin-bottom: 4px; font-size: 0.72rem;">Custom Token / Key:</label>
+                  <div class="cloud-key-input-wrap">
+                    <input 
+                      type="password" 
+                      id="cloud-api-key-input" 
+                      class="form-input form-input-sm node-input cloud-key-input" 
+                      placeholder="Using embedded studio credentials..." 
+                      value="${escapeAttr(nodeState.customOverrideKey || '')}"
+                    />
+                    <button type="button" class="cloud-key-toggle-btn" id="btn-toggle-key-visibility" title="Show/Hide Key">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </details>
 
               <!-- Pre-formatted Optimized Prompt Box -->
               <div class="node-form-group">
@@ -709,13 +725,20 @@ export function attachVideoGeneratorNodeListeners(state, renderApp, onSaveTakeTo
   if (cloudKeyInput) {
     cloudKeyInput.addEventListener('input', (e) => {
       const val = e.target.value.trim();
-      nodeState.cloudApiKey = val;
+      nodeState.customOverrideKey = val;
       const prov = nodeState.selectedCloudProvider || 'replicate-video';
-      localStorage.setItem('doc_cloud_api_key_' + prov, val);
-      if (prov === 'replicate-video') {
-        saveReplicateApiKey(val);
-      } else if (prov === 'gemini-video') {
-        saveGeminiApiKey(val);
+      const provObj = CLOUD_VIDEO_PROVIDERS.find(p => p.id === prov);
+      const effectiveKey = val || provObj?.defaultKey || '';
+      nodeState.cloudApiKey = effectiveKey;
+      if (val) {
+        localStorage.setItem('doc_cloud_api_key_' + prov, val);
+        if (prov === 'replicate-video') {
+          saveReplicateApiKey(val);
+        } else if (prov === 'gemini-video') {
+          saveGeminiApiKey(val);
+        }
+      } else {
+        localStorage.removeItem('doc_cloud_api_key_' + prov);
       }
     });
   }
@@ -735,48 +758,43 @@ export function attachVideoGeneratorNodeListeners(state, renderApp, onSaveTakeTo
       const prov = nodeState.selectedCloudProvider || 'replicate-video';
       const keyVal = cloudKeyInput ? cloudKeyInput.value.trim() : '';
       btnTestKey.disabled = true;
-      btnTestKey.textContent = 'Testing connection...';
+      btnTestKey.textContent = 'Verifying connection...';
       testResultBox.style.display = 'block';
       testResultBox.style.background = 'rgba(255, 255, 255, 0.05)';
       testResultBox.style.color = '#ccc';
-      testResultBox.textContent = 'Connecting to API servers...';
+      testResultBox.textContent = 'Connecting to studio API server...';
 
       if (prov === 'replicate-video') {
         const res = await testReplicateConnection(keyVal);
         btnTestKey.disabled = false;
-        btnTestKey.textContent = '🔍 Test Replicate Key Status';
+        btnTestKey.textContent = '🔍 Verify API';
 
         if (res.ok) {
           testResultBox.style.background = 'rgba(16, 185, 129, 0.15)';
           testResultBox.style.color = '#10B981';
           testResultBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-          testResultBox.innerHTML = `<strong>✓ Replicate Status: Active</strong> — Authenticated as <code>@${res.username}</code> on Replicate API. Ready to generate high-definition MP4 videos.`;
+          testResultBox.innerHTML = `<strong>✓ Replicate Status: Active & Ready</strong> — Authenticated as <code>@${res.username}</code> on Replicate API. Zero setup required for visitors.`;
         } else {
           testResultBox.style.background = 'rgba(239, 68, 68, 0.15)';
           testResultBox.style.color = '#EF4444';
           testResultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-          testResultBox.innerHTML = `<strong>⚠️ Replicate Error</strong>: ${res.message}`;
+          testResultBox.innerHTML = `<strong>⚠️ Replicate Notice</strong>: ${res.message}`;
         }
       } else {
         const res = await testGeminiApiConnection(keyVal);
         btnTestKey.disabled = false;
-        btnTestKey.textContent = '🔍 Test Gemini Key Status';
+        btnTestKey.textContent = '🔍 Verify API';
 
         if (res.ok) {
           testResultBox.style.background = 'rgba(16, 185, 129, 0.15)';
           testResultBox.style.color = '#10B981';
           testResultBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-          testResultBox.innerHTML = `<strong>✓ Key Status: Active</strong> — Connected to <code>${res.model}</code>. Ready for prompts.`;
-        } else if (res.status === 429) {
-          testResultBox.style.background = 'rgba(245, 158, 11, 0.15)';
-          testResultBox.style.color = '#F59E0B';
-          testResultBox.style.border = '1px solid rgba(245, 158, 11, 0.3)';
-          testResultBox.innerHTML = `<strong>⚠️ Quota Exceeded (HTTP 429)</strong>: Google has exhausted the daily 20-request free-tier quota on this key.`;
+          testResultBox.innerHTML = `<strong>✓ Google Gemini Status: Connected</strong> — Active on model <code>${res.model}</code>. Ready for AI cinema direction.`;
         } else {
           testResultBox.style.background = 'rgba(239, 68, 68, 0.15)';
           testResultBox.style.color = '#EF4444';
           testResultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-          testResultBox.innerHTML = `<strong>⚠️ Error (${res.status || 'Connection'})</strong>: ${res.message}`;
+          testResultBox.innerHTML = `<strong>⚠️ Google Gemini Notice</strong>: ${res.message}`;
         }
       }
     });

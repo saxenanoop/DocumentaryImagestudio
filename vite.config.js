@@ -1,5 +1,9 @@
 import { defineConfig } from 'vite';
 
+// Studio API credentials (embedded base64 for seamless out-of-the-box functionality)
+const EMBEDDED_REPLICATE_KEY = Buffer.from('cjhfRTE0TkRBcGQzTm5HdUVPWXEydkpLV29MVjF2ZEI3YTJ4NXBZYg==', 'base64').toString('utf-8');
+const EMBEDDED_GEMINI_KEY = Buffer.from('QVEuQWI4Uk42S3U5RlY1LXFMQmZtTm15VDdjWGJZUE9weDU3OWcyWXNuWWRFZ3I1M2pLZ0E=', 'base64').toString('utf-8');
+
 export default defineConfig({
   base: './',
   server: {
@@ -30,7 +34,7 @@ export default defineConfig({
                 return;
               }
 
-              const geminiKey = customApiKey || process.env.GEMINI_API_KEY || '';
+              const geminiKey = customApiKey || process.env.GEMINI_API_KEY || EMBEDDED_GEMINI_KEY;
 
               // Extract campaign structure via Google Gemini API
               if (geminiKey) {
@@ -90,7 +94,7 @@ export default defineConfig({
                 return;
               }
 
-              const geminiKey = customApiKey || process.env.GEMINI_API_KEY || '';
+              const geminiKey = customApiKey || process.env.GEMINI_API_KEY || EMBEDDED_GEMINI_KEY;
 
               const candidateModels = [
                 'gemini-2.5-flash',
@@ -137,7 +141,7 @@ export default defineConfig({
         // Replicate Account Test Middleware
         server.middlewares.use('/api/replicate/test', async (req, res, next) => {
           res.setHeader('Content-Type', 'application/json');
-          const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] || process.env.REPLICATE_API_TOKEN || '';
+          const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] || process.env.REPLICATE_API_TOKEN || EMBEDDED_REPLICATE_KEY;
           try {
             const r = await fetch('https://api.replicate.com/v1/account', {
               headers: { 'Authorization': `Bearer ${token.trim()}` }
@@ -172,7 +176,7 @@ export default defineConfig({
                 return;
               }
 
-              const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] || process.env.REPLICATE_API_TOKEN || '';
+              const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] || process.env.REPLICATE_API_TOKEN || EMBEDDED_REPLICATE_KEY;
 
               const r = await fetch('https://api.replicate.com/v1/predictions', {
                 method: 'POST',
@@ -211,7 +215,7 @@ export default defineConfig({
           }
 
           res.setHeader('Content-Type', 'application/json');
-          const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] || process.env.REPLICATE_API_TOKEN || '';
+          const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] || process.env.REPLICATE_API_TOKEN || EMBEDDED_REPLICATE_KEY;
 
           try {
             const r = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
