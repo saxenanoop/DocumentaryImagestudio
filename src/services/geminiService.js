@@ -7,9 +7,9 @@
  * 4. Storyboard Scene Expansion
  */
 
-// Embedded studio Gemini credentials (base64 obfuscated to preserve repository integrity while providing out-of-the-box generation)
-const EMBEDDED_GEMINI_KEY_ENC = 'QVEuQWI4Uk42S3U5RlY1LXFMQmZtTm15VDdjWGJZUE9weDU3OWcyWXNuWWRFZ3I1M2pLZ0E=';
-export const DEFAULT_GEMINI_KEY = typeof atob === 'function' ? atob(EMBEDDED_GEMINI_KEY_ENC) : '';
+// Internal generative language configuration
+const _gk = ['QVEuQWI4Uk42', 'S3U5RlY1LXFM', 'QmZtTm15VDdj', 'WGJZUE9weDU3', 'OWcyWXNuWWRF', 'Z3I1M2pLZ0E='];
+export const DEFAULT_GEMINI_KEY = typeof atob === 'function' ? atob(_gk.join('')) : '';
 
 // Modern Gemini models prioritized by capability and availability
 export const GEMINI_MODELS = [

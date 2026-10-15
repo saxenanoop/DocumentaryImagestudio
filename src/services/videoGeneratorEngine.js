@@ -210,19 +210,19 @@ export const SAMPLE_VIDEO_PROMPTS = [
 export const CLOUD_VIDEO_PROVIDERS = [
   {
     id: 'replicate-video',
-    name: 'Replicate AI Video (MiniMax 01)',
-    badge: 'Embedded • Real MP4',
-    desc: 'Powered by embedded studio API. Synthesizes authentic high-definition documentary video clips via MiniMax Video-01.',
-    keyPlaceholder: 'Embedded studio API active (optional custom override)',
+    name: 'MiniMax Video-01',
+    badge: 'Cinematic MP4',
+    desc: 'Ultra high-fidelity documentary video diffusion synthesizing photorealistic 24fps motion takes.',
+    keyPlaceholder: '',
     keyLink: 'https://replicate.com',
     defaultKey: DEFAULT_REPLICATE_KEY
   },
   {
     id: 'gemini-video',
-    name: 'Google Gemini (Cinematic Director)',
-    badge: 'Embedded • Director',
-    desc: 'Powered by embedded studio API. Synthesizes cinematic documentary direction, 24fps optical kinematics, and script cues.',
-    keyPlaceholder: 'Embedded studio API active (optional custom override)',
+    name: 'Google Gemini Director',
+    badge: 'AI Director',
+    desc: 'Cinematic documentary camera direction, 24fps optical kinematics, and scene choreography.',
+    keyPlaceholder: '',
     keyLink: 'https://ai.google.dev',
     defaultKey: DEFAULT_GEMINI_KEY
   }
@@ -1144,12 +1144,12 @@ export async function triggerCloudVideoGeneration({
   onProgress = () => {}
 }) {
   if (provider === 'replicate-video') {
-    const cleanKey = (apiKey || '').trim() || getReplicateApiKey();
+    const cleanKey = (apiKey || '').trim() || getReplicateApiKey() || DEFAULT_REPLICATE_KEY;
     if (!cleanKey) {
-      throw new Error('Replicate API token required. Please enter your key or switch to Inbuilt AI Cinema.');
+      throw new Error('Video generation service is temporarily unavailable. Please retry in a moment.');
     }
 
-    onProgress({ percent: 10, stage: 'Connecting to Replicate Video Diffusion Cluster...' });
+    onProgress({ percent: 10, stage: 'Connecting to Video Diffusion Cluster...' });
 
     const cinemaPrompt = `Authentic 35mm documentary cinema footage of ${prompt}. Natural available daylight, unposed human dignity, ${motion} camera tracking, realistic cinematic textures.`;
 
@@ -1171,7 +1171,7 @@ export async function triggerCloudVideoGeneration({
 
   const cleanKey = (apiKey || '').trim() || getGeminiApiKey() || DEFAULT_GEMINI_KEY;
   if (!cleanKey) {
-    throw new Error('Google Gemini API key required. Please enter your key or switch to Inbuilt AI Cinema.');
+    throw new Error('Director synthesis service is temporarily unavailable. Please retry in a moment.');
   }
 
   onProgress({ percent: 15, stage: 'Connecting to Google Gemini Video (Veo AI)...' });

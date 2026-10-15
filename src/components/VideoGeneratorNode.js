@@ -31,8 +31,7 @@ import {
   triggerCloudVideoGeneration,
   LiveCinemaPlayer
 } from '../services/videoGeneratorEngine.js';
-import { testGeminiApiConnection, saveGeminiApiKey } from '../services/geminiService.js';
-import { getReplicateApiKey, saveReplicateApiKey, testReplicateConnection } from '../services/replicateService.js';
+import { getReplicateApiKey } from '../services/replicateService.js';
 
 export function renderVideoGeneratorNode(state) {
   const { campaignData, storyboardState, builderState, videoGenNodeState, isContextCollapsed } = state;
@@ -166,8 +165,8 @@ export function renderVideoGeneratorNode(state) {
           aria-selected="${engineMode === 'cloud'}"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-          <span>⚡ Replicate AI Video (MiniMax 01 • Active Key)</span>
-          <span class="engine-badge-api font-mono" style="background: rgba(16, 185, 129, 0.2); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);">Real MP4 Diffusion</span>
+          <span>⚡ MiniMax Video-01 Diffusion</span>
+          <span class="engine-badge-api font-mono" style="background: rgba(16, 185, 129, 0.2); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);">24fps Cinema</span>
         </button>
 
         <button 
@@ -441,8 +440,8 @@ export function renderVideoGeneratorNode(state) {
             <!-- MODE B: CLOUD AI VIDEO ENGINE CONTROLS -->
             <div class="node-panel-card">
               <div class="node-panel-header">
-                <h3 class="node-panel-title">2. Cloud AI Video Engine & Key</h3>
-                <span class="node-panel-hint">High-definition AI video synthesis powered by Replicate MiniMax 01</span>
+                <h3 class="node-panel-title">2. Cinema Diffusion Model</h3>
+                <span class="node-panel-hint">High-definition AI video synthesis via MiniMax Video-01</span>
               </div>
 
               <!-- Provider Card -->
@@ -464,47 +463,6 @@ export function renderVideoGeneratorNode(state) {
                   `).join('')}
                 </div>
               </div>
-
-              <!-- Embedded Studio API Active Status Banner -->
-              <div class="embedded-api-status-banner" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; margin-bottom: 12px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #10B981; box-shadow: 0 0 8px #10B981; flex-shrink: 0;"></span>
-                  <div>
-                    <div style="font-size: 0.82rem; font-weight: 600; color: #10B981;">
-                      ${activeCloudProvider.name} Embedded & Active
-                    </div>
-                    <div style="font-size: 0.72rem; color: #9ca3af; margin-top: 2px;">
-                      Pre-configured studio access. No API key required from visitors.
-                    </div>
-                  </div>
-                </div>
-                <button type="button" class="btn btn-xs btn-outline" id="btn-test-cloud-key" style="font-size: 0.72rem; padding: 4px 10px; border-color: rgba(16, 185, 129, 0.35); color: #10B981; white-space: nowrap; flex-shrink: 0;">
-                  🔍 Verify API
-                </button>
-              </div>
-              <div id="cloud-key-test-result" style="display: none; margin-bottom: 12px; font-size: 0.76rem; border-radius: 6px; padding: 8px 12px; line-height: 1.4;"></div>
-
-              <!-- Optional Custom Key Override Collapsible -->
-              <details class="advanced-key-override" style="margin-bottom: 12px; font-size: 0.74rem;">
-                <summary style="cursor: pointer; user-select: none; color: #888; font-family: var(--font-mono, monospace);">
-                  ⚙️ Custom API Key Override (Optional)
-                </summary>
-                <div style="margin-top: 8px; padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px;">
-                  <label for="cloud-api-key-input" class="node-form-label" style="margin-bottom: 4px; font-size: 0.72rem;">Custom Token / Key:</label>
-                  <div class="cloud-key-input-wrap">
-                    <input 
-                      type="password" 
-                      id="cloud-api-key-input" 
-                      class="form-input form-input-sm node-input cloud-key-input" 
-                      placeholder="Using embedded studio credentials..." 
-                      value="${escapeAttr(nodeState.customOverrideKey || '')}"
-                    />
-                    <button type="button" class="cloud-key-toggle-btn" id="btn-toggle-key-visibility" title="Show/Hide Key">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                  </div>
-                </div>
-              </details>
 
               <!-- Pre-formatted Optimized Prompt Box -->
               <div class="node-form-group">
@@ -720,85 +678,7 @@ export function attachVideoGeneratorNodeListeners(state, renderApp, onSaveTakeTo
     });
   });
 
-  // 4. API key input & toggle visibility
-  const cloudKeyInput = document.getElementById('cloud-api-key-input');
-  if (cloudKeyInput) {
-    cloudKeyInput.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      nodeState.customOverrideKey = val;
-      const prov = nodeState.selectedCloudProvider || 'replicate-video';
-      const provObj = CLOUD_VIDEO_PROVIDERS.find(p => p.id === prov);
-      const effectiveKey = val || provObj?.defaultKey || '';
-      nodeState.cloudApiKey = effectiveKey;
-      if (val) {
-        localStorage.setItem('doc_cloud_api_key_' + prov, val);
-        if (prov === 'replicate-video') {
-          saveReplicateApiKey(val);
-        } else if (prov === 'gemini-video') {
-          saveGeminiApiKey(val);
-        }
-      } else {
-        localStorage.removeItem('doc_cloud_api_key_' + prov);
-      }
-    });
-  }
 
-  const btnToggleKey = document.getElementById('btn-toggle-key-visibility');
-  if (btnToggleKey && cloudKeyInput) {
-    btnToggleKey.addEventListener('click', () => {
-      cloudKeyInput.type = cloudKeyInput.type === 'password' ? 'text' : 'password';
-    });
-  }
-
-  // 4b. Test API Key Status
-  const btnTestKey = document.getElementById('btn-test-cloud-key');
-  const testResultBox = document.getElementById('cloud-key-test-result');
-  if (btnTestKey && testResultBox) {
-    btnTestKey.addEventListener('click', async () => {
-      const prov = nodeState.selectedCloudProvider || 'replicate-video';
-      const keyVal = cloudKeyInput ? cloudKeyInput.value.trim() : '';
-      btnTestKey.disabled = true;
-      btnTestKey.textContent = 'Verifying connection...';
-      testResultBox.style.display = 'block';
-      testResultBox.style.background = 'rgba(255, 255, 255, 0.05)';
-      testResultBox.style.color = '#ccc';
-      testResultBox.textContent = 'Connecting to studio API server...';
-
-      if (prov === 'replicate-video') {
-        const res = await testReplicateConnection(keyVal);
-        btnTestKey.disabled = false;
-        btnTestKey.textContent = '🔍 Verify API';
-
-        if (res.ok) {
-          testResultBox.style.background = 'rgba(16, 185, 129, 0.15)';
-          testResultBox.style.color = '#10B981';
-          testResultBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-          testResultBox.innerHTML = `<strong>✓ Replicate Status: Active & Ready</strong> — Authenticated as <code>@${res.username}</code> on Replicate API. Zero setup required for visitors.`;
-        } else {
-          testResultBox.style.background = 'rgba(239, 68, 68, 0.15)';
-          testResultBox.style.color = '#EF4444';
-          testResultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-          testResultBox.innerHTML = `<strong>⚠️ Replicate Notice</strong>: ${res.message}`;
-        }
-      } else {
-        const res = await testGeminiApiConnection(keyVal);
-        btnTestKey.disabled = false;
-        btnTestKey.textContent = '🔍 Verify API';
-
-        if (res.ok) {
-          testResultBox.style.background = 'rgba(16, 185, 129, 0.15)';
-          testResultBox.style.color = '#10B981';
-          testResultBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-          testResultBox.innerHTML = `<strong>✓ Google Gemini Status: Connected</strong> — Active on model <code>${res.model}</code>. Ready for AI cinema direction.`;
-        } else {
-          testResultBox.style.background = 'rgba(239, 68, 68, 0.15)';
-          testResultBox.style.color = '#EF4444';
-          testResultBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-          testResultBox.innerHTML = `<strong>⚠️ Google Gemini Notice</strong>: ${res.message}`;
-        }
-      }
-    });
-  }
 
   // 5. Copy Prompt
   const btnCopyCloudPrompt = document.getElementById('btn-copy-cloud-prompt');
