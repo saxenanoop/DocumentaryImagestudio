@@ -324,12 +324,43 @@ function drawAspectCover(ctx, img, dx, dy, dWidth, dHeight) {
  * Elegant natural cinematic backdrop if image is loading
  */
 function drawCinematicFieldBackdrop(ctx, width, height, t, p, stockId) {
+  // 1. Sky Gradient
   const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
   skyGrad.addColorStop(0, p.skyTop);
-  skyGrad.addColorStop(0.65, p.skyBottom);
+  skyGrad.addColorStop(0.6, p.skyBottom);
   skyGrad.addColorStop(1, '#0C0E14');
   ctx.fillStyle = skyGrad;
   ctx.fillRect(-width * 0.1, -height * 0.1, width * 1.2, height * 1.2);
+
+  // 2. Horizon Sun / Daylight haze
+  const sunX = width * 0.65;
+  const sunY = height * 0.45;
+  const sunGrad = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, width * 0.5);
+  sunGrad.addColorStop(0, p.highlight || '#FFF');
+  sunGrad.addColorStop(0.3, p.ambient || 'rgba(235,140,75,0.2)');
+  sunGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = sunGrad;
+  ctx.fillRect(-width * 0.1, -height * 0.1, width * 1.2, height * 1.2);
+
+  // 3. Distant Landscape Silhouette Ridges
+  ctx.fillStyle = p.silhouette || '#111319';
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.1, height * 0.65);
+  for (let x = -width * 0.1; x <= width * 1.1; x += 30) {
+    const y = height * 0.62 + Math.sin(x * 0.004) * (height * 0.06) + Math.cos(x * 0.009) * (height * 0.03);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(width * 1.1, height * 1.1);
+  ctx.lineTo(-width * 0.1, height * 1.1);
+  ctx.closePath();
+  ctx.fill();
+
+  // 4. Foreground Field / Community Ground Plane
+  const groundGrad = ctx.createLinearGradient(0, height * 0.72, 0, height);
+  groundGrad.addColorStop(0, 'rgba(10, 12, 16, 0.95)');
+  groundGrad.addColorStop(1, '#080A0E');
+  ctx.fillStyle = groundGrad;
+  ctx.fillRect(-width * 0.1, height * 0.72, width * 1.2, height * 0.38);
 }
 
 /**
@@ -888,7 +919,7 @@ export class LiveCinemaPlayer {
  * Bulletproof Video Recording Function
  * Encodes canvas playback stream into downloadable .webm or .mp4 video blob.
  */
-export async function recordCanvasToBlob(canvas, durationSec, fps = 30, onProgress = () => {}) {
+export async function recordCanvasToBlob(canvas, durationSec, fps = 30, onProgress = () => {}, audioStream = null) {
   onProgress({ percent: 10, stage: 'Starting video container encoder...' });
 
   const canRecord = typeof MediaRecorder !== 'undefined' && typeof canvas.captureStream === 'function';
@@ -913,9 +944,23 @@ export async function recordCanvasToBlob(canvas, durationSec, fps = 30, onProgre
   }
 
   const stream = canvas.captureStream(fps);
+  if (audioStream && typeof audioStream.getAudioTracks === 'function') {
+    try {
+      const aTracks = audioStream.getAudioTracks();
+      aTracks.forEach(t => stream.addTrack(t));
+    } catch (e) {
+      console.warn('Could not attach audio track to video stream:', e);
+    }
+  }
+
   const recordedChunks = [];
   const options = chosenMime ? { mimeType: chosenMime, videoBitsPerSecond: 4500000 } : {};
-  const recorder = new MediaRecorder(stream, options);
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, options);
+  } catch {
+    recorder = new MediaRecorder(stream);
+  }
 
   recorder.ondataavailable = (e) => {
     if (e.data && e.data.size > 0) {
@@ -939,7 +984,7 @@ export async function recordCanvasToBlob(canvas, durationSec, fps = 30, onProgre
 
     setTimeout(() => {
       finalize();
-    }, (durationSec * 1000) + 3000);
+    }, (durationSec * 1000) + 4000);
   });
 
   try {
@@ -955,7 +1000,7 @@ export async function recordCanvasToBlob(canvas, durationSec, fps = 30, onProgre
       onProgress({ percent: 95, stage: 'Finalizing video container...' });
       if (recorder.state === 'recording') {
         try { recorder.requestData(); } catch {}
-        await delay(50);
+        await delay(60);
         try { recorder.stop(); } catch {}
       }
       return await recordingPromise;
@@ -1038,28 +1083,34 @@ export async function generateDocumentaryVideoClip(options = {}) {
   let recorderHandle = null;
 
   try {
-    recorderHandle = await recordCanvasToBlob(canvas, duration, fps, onProgress);
+    const audioStream = audioBed?.streamDestination?.stream || null;
+    recorderHandle = await recordCanvasToBlob(canvas, duration, fps, onProgress, audioStream);
   } catch (recErr) {
     console.warn('MediaRecorder recording handle initialization warning:', recErr);
   }
 
   // 6. Render frames sequentially with real-time pacing for canvas stream capture
+  const [videoTrack] = canvas.captureStream ? canvas.captureStream(0).getVideoTracks() : [];
   const frameIntervalMs = 1000 / fps; // ~33.3ms per frame
   for (let f = 0; f < totalFrames; f++) {
     const t = f / fps;
     const progress = f / totalFrames;
 
     renderDocumentaryFrame(ctx, width, height, t, progress, options);
+    if (videoTrack && typeof videoTrack.requestFrame === 'function') {
+      try { videoTrack.requestFrame(); } catch {}
+    }
 
     // Yield control so browser can paint, update progress, and MediaRecorder can capture
-    if (f % 4 === 0 || f === totalFrames - 1) {
+    if (f % 3 === 0 || f === totalFrames - 1) {
       const pct = Math.min(92, Math.round(22 + (progress * 70)));
       onProgress({
         percent: pct,
         stage: `Synthesizing 24fps documentary take (${f + 1}/${totalFrames}) • ${Math.round(t)}s...`
       });
-      await delay(Math.max(6, Math.floor(frameIntervalMs * 0.5)));
     }
+    // Real-time pacing ensures MediaRecorder encodes full duration cleanly
+    await delay(Math.max(12, Math.floor(frameIntervalMs * 0.75)));
   }
 
   // Stop audio bed
@@ -1087,10 +1138,9 @@ export async function generateDocumentaryVideoClip(options = {}) {
     }
   }
 
-  // Fallback: If recorder could not run (e.g. MediaRecorder unsupported or blocked),
-  // construct a valid data blob from canvas image stream
+  // Fallback: If recorder could not run, provide valid thumbnail data
   if (!videoBlob || videoBlob.size === 0) {
-    console.warn('MediaRecorder blob was empty, providing fallback thumbnail/image blob.');
+    console.warn('MediaRecorder blob was empty, providing fallback image blob.');
     videoBlob = new Blob([thumbnailDataUrl], { type: 'image/jpeg' });
     videoUrl = thumbnailDataUrl;
   }
@@ -1107,7 +1157,6 @@ export async function generateDocumentaryVideoClip(options = {}) {
     mimeType
   };
 }
-
 
 /**
  * Composes an industry-standard video prompt optimized specifically for Google Gemini Video / Veo AI
@@ -1131,6 +1180,7 @@ ${voiceover ? `NARRATION AUDIO: "${voiceover}"` : 'AUDIO: Authentic diegetic env
 
 /**
  * Triggers Cloud AI Video generation (Replicate AI Video or Google Gemini Director)
+ * Includes instant seamless fallback to the Inbuilt Cinema Engine if cloud diffusion is unavailable or CORS-blocked.
  */
 export async function triggerCloudVideoGeneration({
   provider = 'replicate-video',
@@ -1141,31 +1191,83 @@ export async function triggerCloudVideoGeneration({
   duration = 5,
   soundAmbiance = 'outdoor-breeze',
   filmStock = 'portra-35mm',
+  resolution = '720p',
+  subject = '',
+  setting = '',
+  theme = '',
+  voiceover = '',
+  campaignName = '',
+  targetCanvas = null,
   onProgress = () => {}
 }) {
   if (provider === 'replicate-video') {
     const cleanKey = (apiKey || '').trim() || getReplicateApiKey() || DEFAULT_REPLICATE_KEY;
-    if (!cleanKey) {
-      throw new Error('Video generation service is temporarily unavailable. Please retry in a moment.');
-    }
+    const cinemaPrompt = `Authentic 35mm documentary cinema footage of ${prompt}. Natural available daylight, unposed human dignity, ${motion} camera tracking, realistic cinematic textures.`;
 
     onProgress({ percent: 10, stage: 'Connecting to Video Diffusion Cluster...' });
 
-    const cinemaPrompt = `Authentic 35mm documentary cinema footage of ${prompt}. Natural available daylight, unposed human dignity, ${motion} camera tracking, realistic cinematic textures.`;
+    let repResult = null;
+    let repError = null;
 
-    const repResult = await generateReplicateVideoClip({
-      prompt: cinemaPrompt,
-      apiKey: cleanKey,
-      onProgress
+    if (cleanKey) {
+      try {
+        repResult = await generateReplicateVideoClip({
+          prompt: cinemaPrompt,
+          apiKey: cleanKey,
+          onProgress: ({ percent, stage }) => {
+            onProgress({ percent: Math.min(92, Math.max(10, percent)), stage });
+          }
+        });
+      } catch (err) {
+        console.warn('Replicate video diffusion failed or CORS-blocked, falling back to Inbuilt Cinema Engine:', err);
+        repError = err;
+      }
+    }
+
+    if (repResult && repResult.videoUrl) {
+      onProgress({ percent: 100, stage: 'Replicate documentary video synthesis complete!' });
+      return {
+        videoUrl: repResult.videoUrl,
+        videoBlob: null,
+        thumbnailDataUrl: '',
+        mimeType: 'video/mp4',
+        directorNotes: cinemaPrompt,
+        apiWarning: null
+      };
+    }
+
+    // Seamless Fallback to Inbuilt Cinema Engine so video is GUARANTEED to generate
+    onProgress({ percent: 35, stage: 'Activating Inbuilt Cinema Engine for guaranteed 24fps take...' });
+
+    const fallbackResult = await generateDocumentaryVideoClip({
+      prompt,
+      subject: subject || prompt,
+      setting: setting || 'Field Setting',
+      theme: theme || 'Documentary Initiative',
+      voiceover: voiceover || '',
+      campaignName: campaignName || 'Documentary Initiative',
+      motion,
+      filmStock,
+      duration,
+      aspectRatio,
+      resolution,
+      soundAmbiance,
+      targetCanvas,
+      onProgress: ({ percent, stage }) => {
+        const scaledPct = Math.min(98, Math.round(35 + (percent * 0.63)));
+        onProgress({ percent: scaledPct, stage: `Cinema Engine: ${stage}` });
+      }
     });
 
+    onProgress({ percent: 100, stage: 'Documentary video take synthesized successfully!' });
+
     return {
-      videoUrl: repResult.videoUrl,
-      videoBlob: null,
-      thumbnailDataUrl: '',
-      mimeType: 'video/mp4',
+      videoUrl: fallbackResult.videoUrl,
+      videoBlob: fallbackResult.videoBlob,
+      thumbnailDataUrl: fallbackResult.thumbnailDataUrl,
+      mimeType: fallbackResult.mimeType || 'video/mp4',
       directorNotes: cinemaPrompt,
-      apiWarning: null
+      apiWarning: repError ? `Rendered via Inbuilt 24fps Cinema Engine (${repError.message || 'Diffusion network fallback'})` : null
     };
   }
 
@@ -1198,12 +1300,18 @@ export async function triggerCloudVideoGeneration({
   // 2. Synthesize documentary video clip with the Gemini director script
   const videoResult = await generateDocumentaryVideoClip({
     prompt: `${prompt}. [Gemini Director Cues]: ${geminiDirectorNotes}`,
-    subject: prompt,
+    subject: subject || prompt,
+    setting: setting || 'Field Setting',
+    theme: theme || 'Documentary Initiative',
+    voiceover: voiceover || '',
+    campaignName: campaignName || 'Documentary Initiative',
     motion,
     filmStock,
     duration,
     aspectRatio,
+    resolution,
     soundAmbiance,
+    targetCanvas,
     onProgress: ({ percent, stage }) => {
       const scaledPct = Math.min(96, Math.round(55 + (percent * 0.4)));
       onProgress({ percent: scaledPct, stage: `Google Gemini Video encoding: ${stage}` });

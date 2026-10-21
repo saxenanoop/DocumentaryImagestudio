@@ -70,27 +70,26 @@ export function renderVideoGeneratorNode(state) {
     try {
       const stored = JSON.parse(localStorage.getItem('doc_session_video_takes') || 'null');
       if (Array.isArray(stored) && stored.length > 0) {
-        nodeState.generatedTakes = stored;
-        if (!nodeState.generatedVideoUrl) {
-          nodeState.generatedVideoUrl = stored[0].videoUrl;
+        // Filter out expired replicate.delivery CDN URLs or dead blob URLs
+        const validStored = stored.filter(t => t && t.videoUrl && !t.videoUrl.includes('replicate.delivery') && !t.videoUrl.startsWith('blob:'));
+        if (validStored.length > 0) {
+          nodeState.generatedTakes = validStored;
+          if (!nodeState.generatedVideoUrl) {
+            nodeState.generatedVideoUrl = validStored[0].videoUrl;
+          }
+        } else {
+          nodeState.generatedTakes = [];
+          nodeState.generatedVideoUrl = null;
+          localStorage.removeItem('doc_session_video_takes');
         }
       } else {
-        // Seed initial verified Replicate take generated with user's active key
-        const liveReplicateTake = {
-          id: 'take_replicate_live',
-          videoUrl: 'https://replicate.delivery/xezq/MMN2Hf2jjP3fK0HzPz3tg4crGjnVEdcaMH1Ss6nvf99hq5tuA/tmp4szo7y2e.mp4',
-          duration: 8,
-          stockName: 'Replicate MiniMax 01',
-          motionLabel: 'Slow Push-In',
-          prompt: 'Village farmers and youth seated in circle discussing cooperative grain storage, set in Community space.',
-          setting: 'Community space',
-          theme: 'Replicate AI Video'
-        };
-        nodeState.generatedTakes = [liveReplicateTake];
-        nodeState.generatedVideoUrl = liveReplicateTake.videoUrl;
-        localStorage.setItem('doc_session_video_takes', JSON.stringify([liveReplicateTake]));
+        nodeState.generatedTakes = [];
+        nodeState.generatedVideoUrl = null;
       }
-    } catch {}
+    } catch {
+      nodeState.generatedTakes = [];
+      nodeState.generatedVideoUrl = null;
+    }
   }
 
   const generatedVideoUrl = nodeState.generatedVideoUrl || null;
@@ -528,7 +527,7 @@ export function renderVideoGeneratorNode(state) {
 
             <!-- Viewport Screen -->
             <div class="cinema-screen-container aspect-${aspectRatio.replace(':', '-')}" id="cinema-screen-container">
-              ${generatedVideoUrl ? `
+              ${(generatedVideoUrl && !isGenerating) ? `
                 <video 
                   id="node-rendered-video" 
                   class="cinema-video-element" 
@@ -711,20 +710,34 @@ export function attachVideoGeneratorNodeListeners(state, renderApp, onSaveTakeTo
       renderApp();
 
       try {
+        const previewCanvas = document.getElementById('cinema-preview-canvas');
         const cloudRes = await triggerCloudVideoGeneration({
           provider: prov,
           apiKey: key,
           prompt: promptToUse,
+          subject: selectedScene?.subject || promptToUse,
+          setting: selectedScene?.setting || nodeState.customSetting || 'Field Setting',
+          theme: selectedScene?.theme || nodeState.customTheme || 'Documentary Initiative',
+          voiceover: selectedScene?.voiceover || nodeState.customVoiceover || '',
+          campaignName: state.campaignData?.campaign_name || 'Documentary Initiative',
           motion: nodeState.motionStyle || 'slow-push-in',
+          filmStock: nodeState.filmStock || 'portra-35mm',
           aspectRatio: nodeState.aspectRatio || '16:9',
           duration: nodeState.duration || 5,
+          resolution: nodeState.resolution || '720p',
+          soundAmbiance: nodeState.soundAmbiance || 'outdoor-breeze',
+          targetCanvas: previewCanvas,
           onProgress: ({ percent, stage }) => {
             nodeState.progressPercent = percent;
             nodeState.progressStage = stage;
             const bar = document.querySelector('.node-progress-bar');
             const text = document.querySelector('.node-progress-text');
+            const overlayBadge = document.querySelector('.generating-badge span:last-child');
+            const overlayTc = document.querySelector('.generating-timecode');
             if (bar) bar.style.width = `${percent}%`;
             if (text) text.textContent = stage;
+            if (overlayBadge) overlayBadge.textContent = `ENCODING TAKE • ${percent}%`;
+            if (overlayTc) overlayTc.textContent = stage;
           }
         });
 
@@ -1049,9 +1062,15 @@ export function attachVideoGeneratorNodeListeners(state, renderApp, onSaveTakeTo
 
   // 17. Regenerate / New Take
   const btnRegen = document.getElementById('btn-node-regen-take');
-  if (btnRegen && btnGenerate) {
+  if (btnRegen) {
     btnRegen.addEventListener('click', () => {
-      btnGenerate.click();
+      const cloudBtn = document.getElementById('btn-node-generate-cloud-video');
+      const inbuiltBtn = document.getElementById('btn-node-generate-video');
+      if (nodeState.engineMode === 'cloud' && cloudBtn) {
+        cloudBtn.click();
+      } else if (inbuiltBtn) {
+        inbuiltBtn.click();
+      }
     });
   }
 
